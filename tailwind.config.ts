@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,6 +62,13 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				// Filtre durumu renkleri
+				status: {
+					completed: '#4ade80', // Yeşil: tamamlandı
+					planned: '#3b82f6',   // Mavi: planlanan
+					pending: '#f97316',   // Turuncu: bekliyor
+					overdue: '#ef4444'    // Kırmızı: gecikmiş
 				}
 			},
 			borderRadius: {

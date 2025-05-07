@@ -1,6 +1,5 @@
 
 import { Customer, FilterStatus } from "@/types";
-import { getFilterStatus } from "@/context/CustomerContext";
 import { formatDate, getStatusText } from "./helpers";
 import { jsPDF } from "jspdf";
 import "jspdf-autotable";
@@ -13,6 +12,33 @@ declare module "jspdf" {
     autoTable: (options: any) => jsPDF;
   }
 }
+
+// Helper function to determine filter status
+const getFilterStatus = (filterChange: { date: Date; isChanged: boolean; changeDate?: Date }): FilterStatus => {
+  const today = new Date();
+  const filterDate = new Date(filterChange.date);
+  
+  if (filterChange.isChanged) {
+    return FilterStatus.COMPLETED;
+  }
+  
+  // 7 days before the filter change date
+  const pendingDate = new Date(filterDate);
+  pendingDate.setDate(pendingDate.getDate() - 7);
+  
+  if (isAfter(today, filterDate)) {
+    return FilterStatus.OVERDUE;
+  } else if (isAfter(today, pendingDate)) {
+    return FilterStatus.PENDING;
+  } else {
+    return FilterStatus.PLANNED;
+  }
+};
+
+// Helper function to determine if a date is after another
+const isAfter = (date1: Date, date2: Date): boolean => {
+  return date1.getTime() > date2.getTime();
+};
 
 export const exportToPDF = (customers: Customer[]) => {
   const doc = new jsPDF();

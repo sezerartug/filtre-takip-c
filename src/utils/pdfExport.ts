@@ -10,6 +10,13 @@ import { tr } from "date-fns/locale";
 declare module "jspdf" {
   interface jsPDF {
     autoTable: (options: any) => jsPDF;
+    internal: {
+      getNumberOfPages: () => number;
+      pageSize: {
+        getWidth: () => number;
+        getHeight: () => number;
+      }
+    }
   }
 }
 
@@ -74,7 +81,7 @@ export const exportToPDF = (customers: Customer[]) => {
     margin: { top: 40 }
   });
   
-  const totalPages = (doc as any).internal.getNumberOfPages();
+  const totalPages = doc.internal.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
     const pageSize = doc.internal.pageSize;

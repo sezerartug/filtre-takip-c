@@ -41,57 +41,67 @@ const isAfter = (date1: Date, date2: Date): boolean => {
 };
 
 export const exportToPDF = (customers: Customer[]) => {
-  const doc = new jsPDF();
+  try {
+    const doc = new jsPDF();
 
-  // Add document title
-  doc.setFontSize(20);
-  doc.text("Su Arıtma Cihazı Filtre Takip", 14, 22);
-  
-  doc.setFontSize(10);
-  const date = format(new Date(), "dd MMMM yyyy", { locale: tr });
-  doc.text(`Oluşturulma Tarihi: ${date}`, 14, 30);
-  
-  // Customer list table
-  const customersTableData = customers.map(customer => {
-    const nextFilter = customer.filterDates.find(filter => !filter.isChanged);
-    const status = nextFilter ? getFilterStatus(nextFilter) : undefined;
+    // Add document title
+    doc.setFontSize(20);
+    doc.text("Su Arıtma Cihazı Filtre Takip", 14, 22);
     
-    return [
-      `${customer.name} ${customer.surname}`,
-      customer.address,
-      formatDate(customer.purchaseDate),
-      nextFilter ? formatDate(nextFilter.date) : "-",
-      status ? getStatusText(status) : "-"
-    ];
-  });
-  
-  doc.autoTable({
-    startY: 40,
-    head: [["Müşteri", "Adres", "Satın Alma", "Sonraki Filtre", "Durum"]],
-    body: customersTableData,
-    headStyles: { fillColor: [0, 123, 255] },
-    styles: { font: "helvetica", fontSize: 8 },
-    margin: { top: 40 }
-  });
-  
-  // Use type assertion for internal properties
-  const totalPages = (doc as any).internal.getNumberOfPages();
-  for (let i = 1; i <= totalPages; i++) {
-    doc.setPage(i);
-    const pageSize = (doc as any).internal.pageSize;
-    const pageWidth = pageSize.getWidth();
-    const pageHeight = pageSize.getHeight();
+    doc.setFontSize(10);
+    const date = format(new Date(), "dd MMMM yyyy", { locale: tr });
+    doc.text(`Oluşturulma Tarihi: ${date}`, 14, 30);
     
-    // Footer with page numbers
-    doc.setFontSize(8);
-    doc.text(
-      `Sayfa ${i} / ${totalPages}`,
-      pageWidth / 2,
-      pageHeight - 10,
-      { align: "center" }
-    );
+    // Customer list table
+    const customersTableData = customers.map(customer => {
+      const nextFilter = customer.filterDates.find(filter => !filter.isChanged);
+      const status = nextFilter ? getFilterStatus(nextFilter) : undefined;
+      
+      return [
+        `${customer.name} ${customer.surname}`,
+        customer.address,
+        formatDate(customer.purchaseDate),
+        nextFilter ? formatDate(nextFilter.date) : "-",
+        status ? getStatusText(status) : "-"
+      ];
+    });
+    
+    // Use autoTable
+    if (doc.autoTable) {
+      doc.autoTable({
+        startY: 40,
+        head: [["Müşteri", "Adres", "Satın Alma", "Sonraki Filtre", "Durum"]],
+        body: customersTableData,
+        headStyles: { fillColor: [0, 123, 255] },
+        styles: { font: "helvetica", fontSize: 8 },
+        margin: { top: 40 }
+      });
+    } else {
+      console.error("autoTable fonksiyonu bulunamadı");
+    }
+    
+    // Use type assertion for internal properties
+    const totalPages = (doc as any).internal.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      const pageSize = (doc as any).internal.pageSize;
+      const pageWidth = pageSize.getWidth();
+      const pageHeight = pageSize.getHeight();
+      
+      // Footer with page numbers
+      doc.setFontSize(8);
+      doc.text(
+        `Sayfa ${i} / ${totalPages}`,
+        pageWidth / 2,
+        pageHeight - 10,
+        { align: "center" }
+      );
+    }
+    
+    // Save the PDF
+    doc.save("su-aritma-filtre-takip.pdf");
+  } catch (error) {
+    console.error("PDF oluşturma hatası:", error);
+    throw error;
   }
-  
-  // Save the PDF
-  doc.save("su-aritma-filtre-takip.pdf");
 };

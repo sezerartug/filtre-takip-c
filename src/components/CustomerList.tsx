@@ -1,17 +1,18 @@
-
 import React, { useState } from "react";
 import { useCustomers } from "@/context/CustomerContext";
 import CustomerCard from "./CustomerCard";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { CustomerForm } from "./CustomerForm";
 import FilterDetails from "./FilterDetails";
 import { Customer } from "@/types";
-import { Search, Plus, FileText } from "lucide-react";
+import { Search, Plus, FileText, Info, Edit, Trash2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { exportToPDF } from "@/utils/pdfExport";
+import { Card, CardContent } from "@/components/ui/card";
+import { formatDate } from "@/utils/helpers";
 
 const CustomerList = () => {
   const { customers, filteredCustomers, searchCustomers, setFilteredCustomers, deleteCustomer } = useCustomers();
@@ -137,16 +138,21 @@ const CustomerList = () => {
         </TabsContent>
       </Tabs>
       
+      {/* İlgili dialoglar */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <DialogContent>
-          <h2 className="text-lg font-semibold mb-4">Yeni Müşteri Ekle</h2>
+          <DialogHeader>
+            <DialogTitle>Yeni Müşteri Ekle</DialogTitle>
+          </DialogHeader>
           <CustomerForm onClose={() => setIsAddDialogOpen(false)} />
         </DialogContent>
       </Dialog>
       
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>
-          <h2 className="text-lg font-semibold mb-4">Müşteri Düzenle</h2>
+          <DialogHeader>
+            <DialogTitle>Müşteri Bilgilerini Düzenle</DialogTitle>
+          </DialogHeader>
           {selectedCustomer && (
             <CustomerForm 
               customer={selectedCustomer} 
@@ -157,12 +163,59 @@ const CustomerList = () => {
       </Dialog>
       
       <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <h2 className="text-lg font-semibold mb-4">
-            {selectedCustomer?.name} {selectedCustomer?.surname}
-          </h2>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Müşteri Bilgileri</DialogTitle>
+          </DialogHeader>
           {selectedCustomer && (
-            <FilterDetails customer={selectedCustomer} />
+            <div className="space-y-4">
+              {/* Müşteri bilgileri kartı */}
+              <Card>
+                <CardContent className="pt-6">
+                  <dl className="space-y-2">
+                    <div className="flex justify-between">
+                      <dt className="text-sm font-medium text-muted-foreground">Ad Soyad:</dt>
+                      <dd className="text-sm">{selectedCustomer.name} {selectedCustomer.surname}</dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt className="text-sm font-medium text-muted-foreground">Adres:</dt>
+                      <dd className="text-sm text-right">{selectedCustomer.address}</dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt className="text-sm font-medium text-muted-foreground">Satın Alma Tarihi:</dt>
+                      <dd className="text-sm">{formatDate(selectedCustomer.purchaseDate)}</dd>
+                    </div>
+                  </dl>
+                  <div className="flex gap-2 mt-4">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full"
+                      onClick={() => {
+                        setIsDetailsDialogOpen(false);
+                        setIsEditDialogOpen(true);
+                      }}
+                    >
+                      <Edit className="mr-2 h-4 w-4" /> Düzenle
+                    </Button>
+                    <Button 
+                      variant="destructive" 
+                      size="sm"
+                      className="w-full"
+                      onClick={() => {
+                        setIsDetailsDialogOpen(false);
+                        setIsDeleteDialogOpen(true);
+                      }}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" /> Sil
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              {/* Filtre detayları */}
+              <FilterDetails customer={selectedCustomer} />
+            </div>
           )}
         </DialogContent>
       </Dialog>

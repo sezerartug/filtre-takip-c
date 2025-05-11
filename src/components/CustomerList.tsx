@@ -65,8 +65,8 @@ const CustomerList = () => {
   const handleExportToPDF = () => {
     let customersToExport = filteredCustomers;
     
-    if (activeTab === "pending") {
-      customersToExport = getPendingCustomers();
+    if (activeTab === "planned") {
+      customersToExport = getPlannedCustomers();
     } else if (activeTab === "overdue") {
       customersToExport = getOverdueCustomers();
     }
@@ -78,19 +78,19 @@ const CustomerList = () => {
     setActiveTab(value);
   };
   
-  // Bekleyen filtre değişimi olan müşterileri filtrele
-  const getPendingCustomers = () => {
+  // Planlanan filtre değişimi olan müşterileri filtrele
+  const getPlannedCustomers = () => {
     return customers.filter(customer => {
       // Müşterinin değiştirilmemiş filtrelerini kontrol et
-      const pendingFilter = customer.filterDates.find(filter => {
+      const plannedFilter = customer.filterDates.find(filter => {
         if (!filter.isChanged) {
           const status = getFilterStatus(filter);
-          return status === FilterStatus.PENDING;
+          return status === FilterStatus.PLANNED;
         }
         return false;
       });
       
-      return pendingFilter !== undefined;
+      return plannedFilter !== undefined;
     });
   };
   
@@ -113,8 +113,8 @@ const CustomerList = () => {
   // İlgili tab için müşteri listesini elde et
   const getCustomersForActiveTab = () => {
     switch (activeTab) {
-      case "pending":
-        return getPendingCustomers();
+      case "planned":
+        return getPlannedCustomers();
       case "overdue":
         return getOverdueCustomers();
       case "all":
@@ -162,7 +162,7 @@ const CustomerList = () => {
       <Tabs defaultValue="all" value={activeTab} onValueChange={handleTabChange}>
         <TabsList className="w-full mb-4">
           <TabsTrigger value="all" className="flex-1">Tüm Müşteriler</TabsTrigger>
-          <TabsTrigger value="pending" className="flex-1">Bekleyen</TabsTrigger>
+          <TabsTrigger value="planned" className="flex-1">Planlanan</TabsTrigger>
           <TabsTrigger value="overdue" className="flex-1">Geciken</TabsTrigger>
         </TabsList>
         
@@ -184,9 +184,9 @@ const CustomerList = () => {
           )}
         </TabsContent>
         
-        <TabsContent value="pending" className="mt-0">
-          {getPendingCustomers().length > 0 ? (
-            getPendingCustomers().map(customer => (
+        <TabsContent value="planned" className="mt-0">
+          {getPlannedCustomers().length > 0 ? (
+            getPlannedCustomers().map(customer => (
               <div key={customer.id} onClick={() => handleDetailsClick(customer)}>
                 <CustomerCard 
                   customer={customer}
@@ -197,7 +197,7 @@ const CustomerList = () => {
             ))
           ) : (
             <div className="text-center py-8">
-              <p className="text-muted-foreground">Bekleyen filtre değişimi olan müşteri bulunamadı</p>
+              <p className="text-muted-foreground">Planlanan filtre değişimi olan müşteri bulunamadı</p>
             </div>
           )}
         </TabsContent>

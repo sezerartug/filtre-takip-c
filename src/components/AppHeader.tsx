@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
-import { LogOut, Menu } from "lucide-react";
+import { LogOut } from "lucide-react";
 
 interface AppHeaderProps {
   title?: string;
@@ -26,7 +26,12 @@ const AppHeader = ({ title = "Su Arıtma Filtre Takip" }: AppHeaderProps) => {
               <span className="text-sm hidden md:inline">
                 {user.username} ({user.role === 'admin' ? 'Yönetici' : 'Teknisyen'})
               </span>
-              <Button variant="outline" size="icon" onClick={logout}>
+              <Button 
+                variant="outline" 
+                size="icon" 
+                onClick={logout}
+                className="transition-none hover:bg-transparent"
+              >
                 <LogOut className="h-4 w-4" />
                 <span className="sr-only">Çıkış</span>
               </Button>

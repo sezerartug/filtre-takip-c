@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useCustomers } from "@/context/CustomerContext";
 import CustomerCard from "./CustomerCard";
@@ -7,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { CustomerForm } from "./CustomerForm";
 import FilterDetails from "./FilterDetails";
-import { Customer } from "@/types";
+import { Customer, FilterStatus } from "@/types";
 import { Search, Plus, FileText, Info, Edit, Trash2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { exportToPDF } from "@/utils/pdfExport";
@@ -15,13 +16,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { formatDate } from "@/utils/helpers";
 
 const CustomerList = () => {
-  const { customers, filteredCustomers, searchCustomers, setFilteredCustomers, deleteCustomer } = useCustomers();
+  const { customers, filteredCustomers, searchCustomers, setFilteredCustomers, deleteCustomer, getFilterStatus } = useCustomers();
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [activeTab, setActiveTab] = useState("all");
   
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
@@ -61,8 +63,67 @@ const CustomerList = () => {
   };
   
   const handleExportToPDF = () => {
-    exportToPDF(filteredCustomers);
+    let customersToExport = filteredCustomers;
+    
+    if (activeTab === "pending") {
+      customersToExport = getPendingCustomers();
+    } else if (activeTab === "overdue") {
+      customersToExport = getOverdueCustomers();
+    }
+    
+    exportToPDF(customersToExport);
   };
+  
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+  };
+  
+  // Bekleyen filtre değişimi olan müşterileri filtrele
+  const getPendingCustomers = () => {
+    return customers.filter(customer => {
+      // Müşterinin değiştirilmemiş filtrelerini kontrol et
+      const pendingFilter = customer.filterDates.find(filter => {
+        if (!filter.isChanged) {
+          const status = getFilterStatus(filter);
+          return status === FilterStatus.PENDING;
+        }
+        return false;
+      });
+      
+      return pendingFilter !== undefined;
+    });
+  };
+  
+  // Geciken filtre değişimi olan müşterileri filtrele
+  const getOverdueCustomers = () => {
+    return customers.filter(customer => {
+      // Müşterinin değiştirilmemiş filtrelerini kontrol et
+      const overdueFilter = customer.filterDates.find(filter => {
+        if (!filter.isChanged) {
+          const status = getFilterStatus(filter);
+          return status === FilterStatus.OVERDUE;
+        }
+        return false;
+      });
+      
+      return overdueFilter !== undefined;
+    });
+  };
+  
+  // İlgili tab için müşteri listesini elde et
+  const getCustomersForActiveTab = () => {
+    switch (activeTab) {
+      case "pending":
+        return getPendingCustomers();
+      case "overdue":
+        return getOverdueCustomers();
+      case "all":
+      default:
+        return filteredCustomers;
+    }
+  };
+  
+  const customersToShow = getCustomersForActiveTab();
   
   return (
     <div>
@@ -89,7 +150,7 @@ const CustomerList = () => {
         
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">
-            {filteredCustomers.length} müşteri
+            {customersToShow.length} müşteri
           </span>
           <Button variant="outline" size="sm" onClick={handleExportToPDF}>
             <FileText className="h-4 w-4 mr-2" />
@@ -98,7 +159,7 @@ const CustomerList = () => {
         </div>
       </div>
       
-      <Tabs defaultValue="all">
+      <Tabs defaultValue="all" value={activeTab} onValueChange={handleTabChange}>
         <TabsList className="w-full mb-4">
           <TabsTrigger value="all" className="flex-1">Tüm Müşteriler</TabsTrigger>
           <TabsTrigger value="pending" className="flex-1">Bekleyen</TabsTrigger>
@@ -124,17 +185,39 @@ const CustomerList = () => {
         </TabsContent>
         
         <TabsContent value="pending" className="mt-0">
-          {/* Pending filters filtering logic will go here */}
-          <div className="text-center py-8">
-            <p className="text-muted-foreground">Bu özellik henüz tamamlanmadı</p>
-          </div>
+          {getPendingCustomers().length > 0 ? (
+            getPendingCustomers().map(customer => (
+              <div key={customer.id} onClick={() => handleDetailsClick(customer)}>
+                <CustomerCard 
+                  customer={customer}
+                  onEdit={handleEditClick}
+                  onDelete={handleDeleteClick}
+                />
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">Bekleyen filtre değişimi olan müşteri bulunamadı</p>
+            </div>
+          )}
         </TabsContent>
         
         <TabsContent value="overdue" className="mt-0">
-          {/* Overdue filters filtering logic will go here */}
-          <div className="text-center py-8">
-            <p className="text-muted-foreground">Bu özellik henüz tamamlanmadı</p>
-          </div>
+          {getOverdueCustomers().length > 0 ? (
+            getOverdueCustomers().map(customer => (
+              <div key={customer.id} onClick={() => handleDetailsClick(customer)}>
+                <CustomerCard 
+                  customer={customer}
+                  onEdit={handleEditClick}
+                  onDelete={handleDeleteClick}
+                />
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">Geciken filtre değişimi olan müşteri bulunamadı</p>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
       

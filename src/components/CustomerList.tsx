@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useCustomers } from "@/context/CustomerContext";
 import CustomerCard from "./CustomerCard";
@@ -14,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { exportToPDF } from "@/utils/pdfExport";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDate } from "@/utils/helpers";
+import { addMonths, isEqual, isSameDay, startOfDay } from "date-fns";
 
 const CustomerList = () => {
   const { customers, filteredCustomers, searchCustomers, setFilteredCustomers, deleteCustomer, getFilterStatus } = useCustomers();
@@ -72,14 +72,17 @@ const CustomerList = () => {
     setActiveTab(value);
   };
   
-  // Planlanan filtre değişimi olan müşterileri filtrele
+  // Planlanan filtre değişimi olan müşterileri filtrele (satın alma tarihinden 6 ay sonra)
   const getPlannedCustomers = () => {
     return customers.filter(customer => {
+      // Satın alma tarihinden 6 ay sonrası için kontrol et
+      const sixMonthsAfterPurchase = addMonths(customer.purchaseDate, 6);
+      
       // Müşterinin değiştirilmemiş filtrelerini kontrol et
       const plannedFilter = customer.filterDates.find(filter => {
         if (!filter.isChanged) {
-          const status = getFilterStatus(filter);
-          return status === FilterStatus.PLANNED;
+          // Filtrenin planlanan tarihi satın alma tarihinden 6 ay sonra mı?
+          return isSameDay(filter.date, sixMonthsAfterPurchase);
         }
         return false;
       });

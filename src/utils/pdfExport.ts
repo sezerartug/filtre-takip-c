@@ -10,6 +10,9 @@ import { tr } from "date-fns/locale";
 declare module "jspdf" {
   interface jsPDF {
     autoTable: (options: any) => jsPDF;
+    lastAutoTable: {
+      finalY: number;
+    };
   }
 }
 
@@ -106,7 +109,7 @@ export const exportToPDF = (customers: Customer[]) => {
       });
       
       // Her bir müşteri için detaylı filtre tablosu ekleyin
-      let yPosition = doc.autoTable.previous.finalY + 15;
+      let yPosition = doc.lastAutoTable.finalY + 15;
       
       for (let i = 0; i < customers.length; i++) {
         const customer = customers[i];
@@ -152,7 +155,7 @@ export const exportToPDF = (customers: Customer[]) => {
           }
         });
         
-        yPosition = doc.autoTable.previous.finalY + 15;
+        yPosition = doc.lastAutoTable.finalY + 15;
       }
     } else {
       console.error("autoTable fonksiyonu bulunamadı");

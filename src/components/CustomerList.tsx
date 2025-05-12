@@ -72,7 +72,7 @@ const CustomerList = () => {
     setActiveTab(value);
   };
   
-  // Planlanan filtre değişimi olan müşterileri filtrele (satın alma tarihinden 6 ay sonra)
+  // Planlanan filtre değişimi olan müşterileri filtrele
   const getPlannedCustomers = () => {
     const today = startOfDay(new Date());
     
@@ -132,50 +132,77 @@ const CustomerList = () => {
   const customersToShow = getCustomersForActiveTab();
   
   return (
-    <div>
-      <div className="mb-4 space-y-2">
-        <div className="flex items-center gap-2">
+    <div className="space-y-5 animate-fade-in">
+      <div className="space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <div className="relative flex-1">
-            <Search className="h-4 w-4 absolute left-2.5 top-2.5 text-muted-foreground" />
+            <Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
             <Input
               placeholder="Müşteri ara..."
               value={searchQuery}
               onChange={handleSearch}
-              className="pl-8"
+              className="pl-9 h-12 rounded-xl border-input/50 focus:border-primary shadow-sm"
             />
           </div>
-          <Button variant="outline" size="icon" onClick={handleClearSearch}>
-            <span className="sr-only">Aramayı temizle</span>
-            &#x2715;
-          </Button>
-          <Button size="icon" onClick={handleAddClick}>
-            <Plus className="h-4 w-4" />
-            <span className="sr-only">Yeni müşteri ekle</span>
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              size="icon" 
+              onClick={handleClearSearch}
+              className="h-12 w-12 rounded-xl border-input/50"
+            >
+              <span className="sr-only">Aramayı temizle</span>
+              &#x2715;
+            </Button>
+            <Button 
+              size="icon" 
+              onClick={handleAddClick}
+              className="h-12 w-12 rounded-xl shadow-sm"
+            >
+              <Plus className="h-5 w-5" />
+              <span className="sr-only">Yeni müşteri ekle</span>
+            </Button>
+          </div>
         </div>
         
         <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">
-            {customersToShow.length} müşteri
+          <span className="text-sm text-muted-foreground font-medium">
+            {customersToShow.length} müşteri listeleniyor
           </span>
-          <Button variant="outline" size="sm" onClick={handleExportToPDF}>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleExportToPDF}
+            className="rounded-xl h-9 shadow-sm"
+          >
             <FileText className="h-4 w-4 mr-2" />
             PDF Olarak İndir
           </Button>
         </div>
       </div>
       
-      <Tabs defaultValue="all" value={activeTab} onValueChange={handleTabChange}>
-        <TabsList className="w-full mb-4">
-          <TabsTrigger value="all" className="flex-1">Tüm Müşteriler</TabsTrigger>
-          <TabsTrigger value="planned" className="flex-1">Planlanan</TabsTrigger>
-          <TabsTrigger value="overdue" className="flex-1">Geciken</TabsTrigger>
+      <Tabs 
+        defaultValue="all" 
+        value={activeTab} 
+        onValueChange={handleTabChange}
+        className="mt-4"
+      >
+        <TabsList className="w-full grid grid-cols-3 h-12 p-1 rounded-xl shadow-sm bg-muted/70 backdrop-blur-sm">
+          <TabsTrigger value="all" className="rounded-lg data-[state=active]:shadow-sm">
+            Tüm Müşteriler
+          </TabsTrigger>
+          <TabsTrigger value="planned" className="rounded-lg data-[state=active]:shadow-sm">
+            Planlanan
+          </TabsTrigger>
+          <TabsTrigger value="overdue" className="rounded-lg data-[state=active]:shadow-sm">
+            Geciken
+          </TabsTrigger>
         </TabsList>
         
-        <TabsContent value="all" className="mt-0">
+        <TabsContent value="all" className="mt-6 space-y-4">
           {filteredCustomers.length > 0 ? (
-            filteredCustomers.map(customer => (
-              <div key={customer.id}>
+            filteredCustomers.map((customer, index) => (
+              <div key={customer.id} style={{ animationDelay: `${index * 0.05}s` }} className="animate-fade-in">
                 <CustomerCard 
                   customer={customer}
                   onEdit={handleEditClick}
@@ -184,16 +211,16 @@ const CustomerList = () => {
               </div>
             ))
           ) : (
-            <div className="text-center py-8">
+            <div className="text-center py-16 bg-card border rounded-xl">
               <p className="text-muted-foreground">Müşteri bulunamadı</p>
             </div>
           )}
         </TabsContent>
         
-        <TabsContent value="planned" className="mt-0">
+        <TabsContent value="planned" className="mt-6 space-y-4">
           {getPlannedCustomers().length > 0 ? (
-            getPlannedCustomers().map(customer => (
-              <div key={customer.id}>
+            getPlannedCustomers().map((customer, index) => (
+              <div key={customer.id} style={{ animationDelay: `${index * 0.05}s` }} className="animate-fade-in">
                 <CustomerCard 
                   customer={customer}
                   onEdit={handleEditClick}
@@ -202,16 +229,16 @@ const CustomerList = () => {
               </div>
             ))
           ) : (
-            <div className="text-center py-8">
+            <div className="text-center py-16 bg-card border rounded-xl">
               <p className="text-muted-foreground">Planlanan filtre değişimi olan müşteri bulunamadı</p>
             </div>
           )}
         </TabsContent>
         
-        <TabsContent value="overdue" className="mt-0">
+        <TabsContent value="overdue" className="mt-6 space-y-4">
           {getOverdueCustomers().length > 0 ? (
-            getOverdueCustomers().map(customer => (
-              <div key={customer.id}>
+            getOverdueCustomers().map((customer, index) => (
+              <div key={customer.id} style={{ animationDelay: `${index * 0.05}s` }} className="animate-fade-in">
                 <CustomerCard 
                   customer={customer}
                   onEdit={handleEditClick}
@@ -220,7 +247,7 @@ const CustomerList = () => {
               </div>
             ))
           ) : (
-            <div className="text-center py-8">
+            <div className="text-center py-16 bg-card border rounded-xl">
               <p className="text-muted-foreground">Geciken filtre değişimi olan müşteri bulunamadı</p>
             </div>
           )}
@@ -229,7 +256,7 @@ const CustomerList = () => {
       
       {/* Dialoglar */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Yeni Müşteri Ekle</DialogTitle>
           </DialogHeader>
@@ -238,7 +265,7 @@ const CustomerList = () => {
       </Dialog>
       
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Müşteri Bilgilerini Düzenle</DialogTitle>
           </DialogHeader>
@@ -252,7 +279,7 @@ const CustomerList = () => {
       </Dialog>
       
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="sm:max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle>Müşteriyi Sil</AlertDialogTitle>
             <AlertDialogDescription>
@@ -260,8 +287,8 @@ const CustomerList = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>İptal</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground">
+            <AlertDialogCancel className="rounded-xl">İptal</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground rounded-xl">
               Sil
             </AlertDialogAction>
           </AlertDialogFooter>

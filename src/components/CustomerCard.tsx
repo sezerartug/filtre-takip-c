@@ -11,7 +11,7 @@ import {
   getStatusColor,
   getStatusBgColor 
 } from "@/utils/helpers";
-import { Edit, Trash, Check } from "lucide-react";
+import { Edit, Trash, Check, Calendar, Clock, MapPin } from "lucide-react";
 
 interface CustomerCardProps {
   customer: Customer;
@@ -41,71 +41,91 @@ const CustomerCard = ({ customer, onEdit, onDelete }: CustomerCardProps) => {
   );
 
   return (
-    <Card className="mb-4 overflow-hidden">
-      <CardContent className="p-4">
-        <div className="flex justify-between items-start">
-          <h3 className="text-lg font-semibold">{customer.name} {customer.surname}</h3>
-          <div className="flex space-x-1">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => onEdit(customer)}
-              className="h-8 w-8"
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => onDelete(customer)}
-              className="h-8 w-8 text-destructive"
-            >
-              <Trash className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-        
-        <p className="text-sm text-muted-foreground">{customer.address}</p>
-        
-        <div className="flex flex-col gap-2 mt-3">
-          <div className="flex justify-between items-center">
-            <span className="text-sm text-muted-foreground">Satın alma:</span>
-            <span className="text-sm">{formatDate(customer.purchaseDate)}</span>
-          </div>
+    <Card className="overflow-hidden card-hover rounded-xl border-input/50">
+      <CardContent className="p-0">
+        <div className="relative">
+          {/* Customer banner with gradient */}
+          <div className="h-3 bg-gradient-to-r from-primary to-primary/60"></div>
           
-          {lastChangedFilter && (
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Son değişim:</span>
-              <span className="text-sm">{lastChangedFilter.changeDate ? formatDate(lastChangedFilter.changeDate) : "-"}</span>
-            </div>
-          )}
-          
-          {nextFilter && (
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Sonraki değişim:</span>
-              <span className="text-sm">{formatDate(nextFilter.date)}</span>
-            </div>
-          )}
-          
-          {nextFilterStatus && (
-            <div className="flex justify-between items-center mt-1">
-              <span className="text-sm text-muted-foreground">Durum:</span>
-              <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusBgColor(nextFilterStatus)} ${getStatusColor(nextFilterStatus)}`}>
-                {getStatusIcon(nextFilterStatus)} {getStatusText(nextFilterStatus)}
+          {/* Main content */}
+          <div className="p-5">
+            <div className="flex justify-between items-start">
+              <h3 className="text-lg font-medium">{customer.name} {customer.surname}</h3>
+              <div className="flex space-x-1">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => onEdit(customer)}
+                  className="h-8 w-8 rounded-lg hover:bg-primary/10 hover:text-primary"
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => onDelete(customer)}
+                  className="h-8 w-8 rounded-lg hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <Trash className="h-4 w-4" />
+                </Button>
               </div>
             </div>
-          )}
+            
+            <p className="text-sm text-muted-foreground flex items-center mt-1">
+              <MapPin className="h-3.5 w-3.5 mr-1.5 text-muted-foreground/70" />
+              {customer.address}
+            </p>
+            
+            <div className="mt-4 space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground flex items-center">
+                  <Calendar className="h-3.5 w-3.5 mr-1.5 text-muted-foreground/70" />
+                  Satın alma:
+                </span>
+                <span className="text-sm font-medium">{formatDate(customer.purchaseDate)}</span>
+              </div>
+              
+              {lastChangedFilter && (
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground flex items-center">
+                    <Clock className="h-3.5 w-3.5 mr-1.5 text-muted-foreground/70" />
+                    Son değişim:
+                  </span>
+                  <span className="text-sm font-medium">{lastChangedFilter.changeDate ? formatDate(lastChangedFilter.changeDate) : "-"}</span>
+                </div>
+              )}
+              
+              {nextFilter && (
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground flex items-center">
+                    <Calendar className="h-3.5 w-3.5 mr-1.5 text-muted-foreground/70" />
+                    Sonraki değişim:
+                  </span>
+                  <span className="text-sm font-medium">{formatDate(nextFilter.date)}</span>
+                </div>
+              )}
+              
+              {nextFilterStatus && (
+                <div className="flex justify-between items-center mt-2">
+                  <span className="text-sm text-muted-foreground">Durum:</span>
+                  <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${getStatusBgColor(nextFilterStatus)} ${getStatusColor(nextFilterStatus)}`}>
+                    {getStatusIcon(nextFilterStatus)} {getStatusText(nextFilterStatus)}
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            {nextFilter && !nextFilter.isChanged && nextFilterIndex !== -1 && (
+              <Button 
+                className="w-full mt-4 rounded-lg"
+                onClick={() => markFilterChanged(customer.id, nextFilterIndex)}
+                size="sm"
+              >
+                <Check className="mr-2 h-4 w-4" /> Filtre Değişimini Kaydet
+              </Button>
+            )}
+          </div>
         </div>
-        
-        {nextFilter && !nextFilter.isChanged && nextFilterIndex !== -1 && (
-          <Button 
-            className="w-full mt-3"
-            onClick={() => markFilterChanged(customer.id, nextFilterIndex)}
-            size="sm"
-          >
-            <Check className="mr-2 h-4 w-4" /> Filtre Değişimini Kaydet
-          </Button>
-        )}
       </CardContent>
     </Card>
   );

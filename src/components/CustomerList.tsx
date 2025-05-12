@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { exportToPDF } from "@/utils/pdfExport";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDate } from "@/utils/helpers";
-import { addMonths, isEqual, isSameDay, startOfDay } from "date-fns";
+import { addMonths, isEqual, isSameDay, startOfDay, isBefore, isAfter } from "date-fns";
 
 const CustomerList = () => {
   const { customers, filteredCustomers, searchCustomers, setFilteredCustomers, deleteCustomer, getFilterStatus } = useCustomers();
@@ -74,36 +74,45 @@ const CustomerList = () => {
   
   // Planlanan filtre değişimi olan müşterileri filtrele (satın alma tarihinden 6 ay sonra)
   const getPlannedCustomers = () => {
+    const today = startOfDay(new Date());
+    
     return customers.filter(customer => {
-      // Satın alma tarihinden 6 ay sonrası için kontrol et
-      const sixMonthsAfterPurchase = addMonths(customer.purchaseDate, 6);
+      // Henüz değiştirilmemiş filtreleri bul
+      const uncompletedFilters = customer.filterDates.filter(filter => !filter.isChanged);
       
-      // Müşterinin değiştirilmemiş filtrelerini kontrol et
-      const plannedFilter = customer.filterDates.find(filter => {
-        if (!filter.isChanged) {
-          // Filtrenin planlanan tarihi satın alma tarihinden 6 ay sonra mı?
-          return isSameDay(filter.date, sixMonthsAfterPurchase);
+      // Her bir değiştirilmemiş filtre için kontrol et
+      for (const filter of uncompletedFilters) {
+        const filterDate = startOfDay(new Date(filter.date));
+        
+        // Bugün tam olarak filtre değişim günü mü?
+        if (isSameDay(filterDate, today)) {
+          return true;
         }
-        return false;
-      });
+      }
       
-      return plannedFilter !== undefined;
+      return false;
     });
   };
   
   // Geciken filtre değişimi olan müşterileri filtrele
   const getOverdueCustomers = () => {
+    const today = startOfDay(new Date());
+    
     return customers.filter(customer => {
-      // Müşterinin değiştirilmemiş filtrelerini kontrol et
-      const overdueFilter = customer.filterDates.find(filter => {
-        if (!filter.isChanged) {
-          const status = getFilterStatus(filter);
-          return status === FilterStatus.OVERDUE;
-        }
-        return false;
-      });
+      // Henüz değiştirilmemiş filtreleri bul
+      const uncompletedFilters = customer.filterDates.filter(filter => !filter.isChanged);
       
-      return overdueFilter !== undefined;
+      // Her bir değiştirilmemiş filtre için kontrol et
+      for (const filter of uncompletedFilters) {
+        const filterDate = startOfDay(new Date(filter.date));
+        
+        // Filtre değişim günü geçmiş mi?
+        if (isAfter(today, filterDate)) {
+          return true;
+        }
+      }
+      
+      return false;
     });
   };
   

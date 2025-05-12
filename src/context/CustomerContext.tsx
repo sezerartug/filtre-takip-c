@@ -1,7 +1,6 @@
-
 import { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { Customer, FilterChange, FilterStatus } from '../types';
-import { format, addMonths, isAfter, isBefore } from 'date-fns';
+import { format, addMonths, isAfter, isBefore, isSameDay, startOfDay } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
@@ -158,21 +157,17 @@ export const CustomerProvider = ({ children }: CustomerProviderProps) => {
   };
 
   const getFilterStatus = (filterChange: FilterChange): FilterStatus => {
-    const today = new Date();
-    const filterDate = new Date(filterChange.date);
+    const today = startOfDay(new Date());
+    const filterDate = startOfDay(new Date(filterChange.date));
     
     if (filterChange.isChanged) {
       return FilterStatus.COMPLETED;
     }
     
-    // 7 days before the filter change date
-    const pendingDate = new Date(filterDate);
-    pendingDate.setDate(pendingDate.getDate() - 7);
-    
-    if (isAfter(today, filterDate)) {
+    if (isSameDay(today, filterDate)) {
+      return FilterStatus.PLANNED;
+    } else if (isAfter(today, filterDate)) {
       return FilterStatus.OVERDUE;
-    } else if (isAfter(today, pendingDate)) {
-      return FilterStatus.PENDING;
     } else {
       return FilterStatus.PLANNED;
     }

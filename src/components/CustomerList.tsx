@@ -19,7 +19,6 @@ const CustomerList = () => {
   const { customers, filteredCustomers, searchCustomers, setFilteredCustomers, deleteCustomer, getFilterStatus } = useCustomers();
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -43,11 +42,6 @@ const CustomerList = () => {
   const handleEditClick = (customer: Customer) => {
     setSelectedCustomer(customer);
     setIsEditDialogOpen(true);
-  };
-  
-  const handleDetailsClick = (customer: Customer) => {
-    setSelectedCustomer(customer);
-    setIsDetailsDialogOpen(true);
   };
   
   const handleDeleteClick = (customer: Customer) => {
@@ -169,7 +163,7 @@ const CustomerList = () => {
         <TabsContent value="all" className="mt-0">
           {filteredCustomers.length > 0 ? (
             filteredCustomers.map(customer => (
-              <div key={customer.id} onClick={() => handleDetailsClick(customer)}>
+              <div key={customer.id}>
                 <CustomerCard 
                   customer={customer}
                   onEdit={handleEditClick}
@@ -187,7 +181,7 @@ const CustomerList = () => {
         <TabsContent value="planned" className="mt-0">
           {getPlannedCustomers().length > 0 ? (
             getPlannedCustomers().map(customer => (
-              <div key={customer.id} onClick={() => handleDetailsClick(customer)}>
+              <div key={customer.id}>
                 <CustomerCard 
                   customer={customer}
                   onEdit={handleEditClick}
@@ -205,7 +199,7 @@ const CustomerList = () => {
         <TabsContent value="overdue" className="mt-0">
           {getOverdueCustomers().length > 0 ? (
             getOverdueCustomers().map(customer => (
-              <div key={customer.id} onClick={() => handleDetailsClick(customer)}>
+              <div key={customer.id}>
                 <CustomerCard 
                   customer={customer}
                   onEdit={handleEditClick}
@@ -221,9 +215,9 @@ const CustomerList = () => {
         </TabsContent>
       </Tabs>
       
-      {/* İlgili dialoglar */}
+      {/* Dialoglar */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Yeni Müşteri Ekle</DialogTitle>
           </DialogHeader>
@@ -232,7 +226,7 @@ const CustomerList = () => {
       </Dialog>
       
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Müşteri Bilgilerini Düzenle</DialogTitle>
           </DialogHeader>
@@ -241,64 +235,6 @@ const CustomerList = () => {
               customer={selectedCustomer} 
               onClose={() => setIsEditDialogOpen(false)} 
             />
-          )}
-        </DialogContent>
-      </Dialog>
-      
-      <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Müşteri Bilgileri</DialogTitle>
-          </DialogHeader>
-          {selectedCustomer && (
-            <div className="space-y-4">
-              {/* Müşteri bilgileri kartı */}
-              <Card>
-                <CardContent className="pt-6">
-                  <dl className="space-y-2">
-                    <div className="flex justify-between">
-                      <dt className="text-sm font-medium text-muted-foreground">Ad Soyad:</dt>
-                      <dd className="text-sm">{selectedCustomer.name} {selectedCustomer.surname}</dd>
-                    </div>
-                    <div className="flex justify-between">
-                      <dt className="text-sm font-medium text-muted-foreground">Adres:</dt>
-                      <dd className="text-sm text-right">{selectedCustomer.address}</dd>
-                    </div>
-                    <div className="flex justify-between">
-                      <dt className="text-sm font-medium text-muted-foreground">Satın Alma Tarihi:</dt>
-                      <dd className="text-sm">{formatDate(selectedCustomer.purchaseDate)}</dd>
-                    </div>
-                  </dl>
-                  <div className="flex gap-2 mt-4">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="w-full"
-                      onClick={() => {
-                        setIsDetailsDialogOpen(false);
-                        setIsEditDialogOpen(true);
-                      }}
-                    >
-                      <Edit className="mr-2 h-4 w-4" /> Düzenle
-                    </Button>
-                    <Button 
-                      variant="destructive" 
-                      size="sm"
-                      className="w-full"
-                      onClick={() => {
-                        setIsDetailsDialogOpen(false);
-                        setIsDeleteDialogOpen(true);
-                      }}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" /> Sil
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              {/* Filtre detayları */}
-              <FilterDetails customer={selectedCustomer} />
-            </div>
           )}
         </DialogContent>
       </Dialog>

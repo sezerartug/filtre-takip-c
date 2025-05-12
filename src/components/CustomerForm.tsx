@@ -17,14 +17,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Customer, FilterStatus } from "@/types";
+import { Customer } from "@/types";
 import { useCustomers } from "@/context/CustomerContext";
-import { CalendarIcon, Filter } from "lucide-react";
+import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { Card, CardContent } from "@/components/ui/card";
-import { getStatusBgColor, getStatusColor, getStatusIcon, getStatusText, formatDate } from "@/utils/helpers";
 
 interface CustomerFormProps {
   customer?: Customer;
@@ -39,7 +37,7 @@ type FormValues = {
 };
 
 export const CustomerForm = ({ customer, onClose }: CustomerFormProps) => {
-  const { addCustomer, updateCustomer, getFilterStatus, getNextFilterChange } = useCustomers();
+  const { addCustomer, updateCustomer } = useCustomers();
   const [date, setDate] = useState<Date | undefined>(customer?.purchaseDate);
   
   const form = useForm<FormValues>({
@@ -65,10 +63,6 @@ export const CustomerForm = ({ customer, onClose }: CustomerFormProps) => {
     }
     onClose();
   };
-
-  // Eğer mevcut müşteri varsa, bir sonraki filtre değişimini al
-  const nextFilter = customer ? getNextFilterChange(customer) : null;
-  const nextFilterStatus = nextFilter ? getFilterStatus(nextFilter) : null;
 
   return (
     <Form {...form}>
@@ -162,26 +156,6 @@ export const CustomerForm = ({ customer, onClose }: CustomerFormProps) => {
             </FormItem>
           )}
         />
-
-        {customer && nextFilter && (
-          <Card className="mt-4">
-            <CardContent className="pt-4">
-              <h3 className="text-sm font-medium mb-2">Bir Sonraki Filtre Durumu</h3>
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <Filter className="h-4 w-4" /> 
-                  <span className="text-sm">{formatDate(nextFilter.date)}</span>
-                </div>
-                {nextFilterStatus && (
-                  <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium 
-                    ${getStatusBgColor(nextFilterStatus)} ${getStatusColor(nextFilterStatus)}`}>
-                    {getStatusIcon(nextFilterStatus)} {getStatusText(nextFilterStatus)}
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
         
         <div className="flex justify-end space-x-2 pt-4">
           <Button type="button" variant="outline" onClick={onClose}>

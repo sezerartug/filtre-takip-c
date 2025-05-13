@@ -30,7 +30,7 @@ const AppHeader = ({ title = "Su Arıtma Filtre Takip" }: AppHeaderProps) => {
                 variant="outline" 
                 size="icon" 
                 onClick={logout}
-                className="transition-none hover:bg-transparent"
+                className="bg-transparent border-primary-foreground/20 hover:bg-primary-foreground/10 text-primary-foreground"
               >
                 <LogOut className="h-4 w-4" />
                 <span className="sr-only">Çıkış</span>

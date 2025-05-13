@@ -9,8 +9,9 @@ import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider } from "./context/AuthContext";
+import CapacitorApp from "./components/CapacitorApp";
 
-// Import Capacitor core
+// Capacitor core'u içe aktar
 import { Capacitor } from "@capacitor/core";
 import { useEffect } from "react";
 
@@ -18,10 +19,21 @@ const queryClient = new QueryClient();
 
 const App = () => {
   useEffect(() => {
-    // Handle back button for mobile apps
+    // Mobil uygulamalar için geri düğmesi işleme
     if (Capacitor.isNativePlatform()) {
-      const handleBackButton = () => {
-        // Custom back button behavior if needed
+      const handleBackButton = (ev: any) => {
+        // Özel geri düğmesi davranışı gerekirse buraya eklenebilir
+        ev.detail.register(10, () => {
+          if (window.location.pathname === "/") {
+            // Ana sayfadaysak, geri tuşu çıkış yapar mı diye soralım
+            if (confirm("Uygulamadan çıkmak istiyor musunuz?")) {
+              (window as any).navigator.app?.exitApp();
+            }
+          } else {
+            // Diğer sayfalarda normal geri davranışı
+            window.history.back();
+          }
+        });
       };
       
       document.addEventListener('ionBackButton', handleBackButton);
@@ -34,20 +46,22 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <BrowserRouter>
-          <AuthProvider>
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route element={<ProtectedRoute />}>
-                <Route path="/" element={<Index />} />
-                {/* Diğer korumalı rotalar buraya eklenebilir */}
-              </Route>
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-            <Toaster />
-            <Sonner />
-          </AuthProvider>
-        </BrowserRouter>
+        <CapacitorApp>
+          <BrowserRouter>
+            <AuthProvider>
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route element={<ProtectedRoute />}>
+                  <Route path="/" element={<Index />} />
+                  {/* Diğer korumalı rotalar buraya eklenebilir */}
+                </Route>
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+              <Toaster />
+              <Sonner />
+            </AuthProvider>
+          </BrowserRouter>
+        </CapacitorApp>
       </TooltipProvider>
     </QueryClientProvider>
   );

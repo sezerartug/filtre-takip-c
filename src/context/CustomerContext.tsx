@@ -1,9 +1,11 @@
+
 import { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { Customer, FilterChange, FilterStatus } from '../types';
 import { format, addMonths, isAfter, isBefore, isSameDay, startOfDay } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
+import { Capacitor } from '@capacitor/core';
 
 interface CustomerContextType {
   customers: Customer[];
@@ -38,15 +40,16 @@ export const CustomerProvider = ({ children }: CustomerProviderProps) => {
   const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Mock data loading effect - we'll replace this with real database later
+  // Verileri yükleme efekti - bunu daha sonra gerçek Supabase veritabanıyla değiştireceğiz
   useEffect(() => {
-    // Simulate loading from local storage or a database
+    // localStorage veya veritabanından yükleme simülasyonu
     const loadSavedCustomers = () => {
+      // Önce localStorage'dan yükleme yapalım, Supabase bağlantısı eklenince bu kısım değişecek
       const savedCustomers = localStorage.getItem('customers');
       if (savedCustomers) {
         try {
           const parsed = JSON.parse(savedCustomers);
-          // Convert string dates to Date objects
+          // String tarihleri Date nesnelerine dönüştür
           const customers = parsed.map((customer: any) => ({
             ...customer,
             purchaseDate: new Date(customer.purchaseDate),
@@ -58,23 +61,34 @@ export const CustomerProvider = ({ children }: CustomerProviderProps) => {
           }));
           setCustomers(customers);
           setFilteredCustomers(customers);
+          
+          // Eğer mobil cihazda çalışıyorsa bildirim göster
+          if (Capacitor.isNativePlatform()) {
+            toast.info(`${customers.length} müşteri yüklendi`, { 
+              duration: 3000 
+            });
+          }
         } catch (error) {
-          console.error('Error parsing customers:', error);
+          console.error('Müşteri verilerini ayrıştırma hatası:', error);
         }
       }
       setIsLoading(false);
     };
 
-    // Simulate network delay
+    // Ağ gecikmesi simülasyonu
     setTimeout(() => {
       loadSavedCustomers();
     }, 800);
   }, []);
 
-  // Save to localStorage whenever customers change
+  // Müşteriler değiştiğinde localStorage'a kaydet
+  // Not: Supabase entegrasyonundan sonra bu fonksiyon Supabase'e kaydetme işlemi yapacak
   useEffect(() => {
     if (!isLoading) {
       localStorage.setItem('customers', JSON.stringify(customers));
+      
+      // Supabase bağlantısı eklendikten sonra, burada veritabanına senkronizasyon yapılacak
+      // TODO: Supabase bağlantısı eklendiğinde burayı güncelle
     }
   }, [customers, isLoading]);
 

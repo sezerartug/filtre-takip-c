@@ -60,8 +60,8 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <CapacitorApp>
-          <BrowserRouter>
-            <AuthProvider>
+          <AuthProvider>
+            <BrowserRouter>
               <Routes>
                 <Route path="/login" element={<Login />} />
                 <Route element={<ProtectedRoute />}>
@@ -72,8 +72,8 @@ const App = () => {
               </Routes>
               <Toaster />
               <Sonner />
-            </AuthProvider>
-          </BrowserRouter>
+            </BrowserRouter>
+          </AuthProvider>
         </CapacitorApp>
       </TooltipProvider>
     </QueryClientProvider>

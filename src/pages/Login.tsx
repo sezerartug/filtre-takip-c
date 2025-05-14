@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/form";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 type FormValues = {
   username: string;
@@ -29,7 +30,8 @@ type FormValues = {
 
 const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   
   const form = useForm<FormValues>({
     defaultValues: {
@@ -38,11 +40,21 @@ const Login = () => {
     },
   });
 
+  // Eğer kullanıcı zaten oturum açmışsa ana sayfaya yönlendir
+  useEffect(() => {
+    if (isAuthenticated) {
+      console.log("Kullanıcı zaten oturum açmış, ana sayfaya yönlendiriliyor");
+      navigate("/", { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
+
   const onSubmit = async (data: FormValues) => {
     setIsLoading(true);
     try {
       await login(data.username, data.password);
       toast.success("Giriş başarılı");
+      console.log("Giriş başarılı, ana sayfaya yönlendiriliyor");
+      navigate("/", { replace: true });
     } catch (error) {
       console.error("Giriş hatası:", error);
       toast.error("Kullanıcı adı veya şifre hatalı");

@@ -9,6 +9,7 @@ import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider } from "./context/AuthContext";
+import { CustomerProvider } from "./context/CustomerContext";
 import CapacitorApp from "./components/CapacitorApp";
 
 // Capacitor core'u içe aktar
@@ -58,7 +59,11 @@ const App = () => {
               <Routes>
                 <Route path="/login" element={<Login />} />
                 <Route element={<ProtectedRoute />}>
-                  <Route path="/" element={<Index />} />
+                  <Route path="/" element={
+                    <CustomerProvider>
+                      <Index />
+                    </CustomerProvider>
+                  } />
                   {/* Diğer korumalı rotalar buraya eklenebilir */}
                 </Route>
                 <Route path="*" element={<NotFound />} />

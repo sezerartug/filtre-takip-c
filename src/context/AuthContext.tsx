@@ -1,6 +1,8 @@
 
 import { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 type User = {
   id: string;
@@ -53,44 +55,119 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   // Başlangıçta oturum kontrolü
   useEffect(() => {
-    const savedUser = localStorage.getItem('auth_user');
-    if (savedUser) {
+    const checkSession = async () => {
+      setIsLoading(true);
       try {
-        const parsedUser = JSON.parse(savedUser);
-        setUser(parsedUser);
+        // Önce mevcut oturum bilgisini kontrol et
+        const savedUser = localStorage.getItem('auth_user');
+        
+        if (savedUser) {
+          const parsedUser = JSON.parse(savedUser);
+          setUser(parsedUser);
+          
+          // Supabase ile oturum açın
+          const { error } = await supabase.auth.signInWithPassword({
+            email: `${parsedUser.username}@example.com`,
+            password: parsedUser.id + "secret",
+          });
+          
+          if (error) {
+            console.error("Supabase oturum hatası:", error);
+            localStorage.removeItem('auth_user');
+            setUser(null);
+          }
+        }
       } catch (error) {
         console.error('Oturum verisi okunamadı:', error);
         localStorage.removeItem('auth_user');
+      } finally {
+        setIsLoading(false);
       }
-    }
-    setIsLoading(false);
+    };
+    
+    checkSession();
   }, []);
 
   const login = async (username: string, password: string): Promise<void> => {
-    // Demo giriş işlemi - gerçek bir API'den doğrulama yapılmalı
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        const foundUser = DEMO_USERS.find(
-          (u) => u.username === username && u.password === password
-        );
+    setIsLoading(true);
+    // Demo giriş işlemi
+    try {
+      const foundUser = DEMO_USERS.find(
+        (u) => u.username === username && u.password === password
+      );
 
-        if (foundUser) {
-          const { password: _, ...userWithoutPassword } = foundUser;
-          setUser(userWithoutPassword);
-          localStorage.setItem('auth_user', JSON.stringify(userWithoutPassword));
-          navigate('/');
-          resolve();
-        } else {
-          reject(new Error('Kullanıcı adı veya şifre hatalı'));
+      if (foundUser) {
+        const { password: _, ...userWithoutPassword } = foundUser;
+        
+        // Supabase ile oturum açın (demo kullanıcı için)
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: `${username}@example.com`,
+          password: foundUser.id + "secret",
+        });
+        
+        if (error) {
+          // Kullanıcı yoksa kayıt olun
+          if (error.message.includes("Invalid login credentials")) {
+            const { error: signUpError } = await supabase.auth.signUp({
+              email: `${username}@example.com`,
+              password: foundUser.id + "secret",
+            });
+            
+            if (signUpError) {
+              throw new Error('Supabase kayıt hatası: ' + signUpError.message);
+            }
+            
+            // Yeniden giriş yapın
+            const { error: signInError } = await supabase.auth.signInWithPassword({
+              email: `${username}@example.com`,
+              password: foundUser.id + "secret",
+            });
+            
+            if (signInError) {
+              throw new Error('Supabase giriş hatası: ' + signInError.message);
+            }
+          } else {
+            throw new Error('Supabase giriş hatası: ' + error.message);
+          }
         }
-      }, 1000); // 1 saniyelik gecikme ekleyerek gerçek API çağrısını simüle ediyoruz
-    });
+        
+        // Kullanıcı bilgilerini saklayın
+        setUser(userWithoutPassword);
+        localStorage.setItem('auth_user', JSON.stringify(userWithoutPassword));
+        
+        // Ana sayfaya yönlendirin
+        navigate('/');
+        toast.success("Giriş başarılı");
+      } else {
+        throw new Error('Kullanıcı adı veya şifre hatalı');
+      }
+    } catch (error: any) {
+      console.error('Giriş hatası:', error);
+      toast.error(error.message || 'Giriş yapılamadı');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('auth_user');
-    navigate('/login');
+  const logout = async () => {
+    setIsLoading(true);
+    try {
+      // Supabase oturumunu sonlandır
+      await supabase.auth.signOut();
+      
+      // Yerel oturumu temizle
+      setUser(null);
+      localStorage.removeItem('auth_user');
+      
+      // Login sayfasına yönlendir
+      navigate('/login');
+      toast.success("Çıkış yapıldı");
+    } catch (error) {
+      console.error('Çıkış hatası:', error);
+      toast.error('Çıkış yapılırken hata oluştu');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

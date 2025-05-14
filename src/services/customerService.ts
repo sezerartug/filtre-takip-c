@@ -8,6 +8,13 @@ import { v4 as uuidv4 } from 'uuid';
 // Müşteri verilerini Supabase'den getiren fonksiyon
 export async function fetchCustomers(): Promise<Customer[]> {
   try {
+    // Önce oturum kontrolü
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      toast.error('Oturum açılmamış. Lütfen giriş yapın.');
+      return [];
+    }
+    
     // Önce müşterileri getir
     const { data: customersData, error: customersError } = await supabase
       .from('customers')
@@ -79,6 +86,12 @@ export async function addCustomerToDb(customer: Omit<Customer, "id" | "filterDat
 
     const userId = session.user.id;
     const newCustomerId = uuidv4();
+    
+    console.log("Eklenen müşteri detayları:", {
+      ...customer,
+      userId: userId,
+      customerId: newCustomerId
+    });
     
     // Müşteri kaydını oluştur
     const { error: customerError } = await supabase

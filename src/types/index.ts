@@ -3,6 +3,7 @@ export interface FilterChange {
   date: Date;
   isChanged: boolean;
   changeDate?: Date;
+  id?: string;  // Veritabanı ID'si ekliyoruz
 }
 
 export interface Customer {

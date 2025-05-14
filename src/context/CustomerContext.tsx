@@ -1,4 +1,3 @@
-
 import { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { Customer, FilterChange, FilterStatus } from '../types';
 import { format, addMonths, isAfter, isBefore, isSameDay, startOfDay } from 'date-fns';
@@ -6,6 +5,13 @@ import { tr } from 'date-fns/locale';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
 import { Capacitor } from '@capacitor/core';
+import { 
+  fetchCustomers, 
+  addCustomerToDb, 
+  updateCustomerInDb, 
+  deleteCustomerFromDb,
+  markFilterChangedInDb
+} from '@/services/customerService';
 
 interface CustomerContextType {
   customers: Customer[];
@@ -19,6 +25,7 @@ interface CustomerContextType {
   filteredCustomers: Customer[];
   setFilteredCustomers: (customers: Customer[]) => void;
   isLoading: boolean;
+  refreshCustomers: () => Promise<void>;
 }
 
 const CustomerContext = createContext<CustomerContextType | undefined>(undefined);
@@ -40,134 +47,134 @@ export const CustomerProvider = ({ children }: CustomerProviderProps) => {
   const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Verileri yükleme efekti - bunu daha sonra gerçek Supabase veritabanıyla değiştireceğiz
-  useEffect(() => {
-    // localStorage veya veritabanından yükleme simülasyonu
-    const loadSavedCustomers = () => {
-      // Önce localStorage'dan yükleme yapalım, Supabase bağlantısı eklenince bu kısım değişecek
-      const savedCustomers = localStorage.getItem('customers');
-      if (savedCustomers) {
-        try {
-          const parsed = JSON.parse(savedCustomers);
-          // String tarihleri Date nesnelerine dönüştür
-          const customers = parsed.map((customer: any) => ({
-            ...customer,
-            purchaseDate: new Date(customer.purchaseDate),
-            filterDates: customer.filterDates.map((filter: any) => ({
-              ...filter,
-              date: new Date(filter.date),
-              changeDate: filter.changeDate ? new Date(filter.changeDate) : undefined,
-            })),
-          }));
-          setCustomers(customers);
-          setFilteredCustomers(customers);
-          
-          // Eğer mobil cihazda çalışıyorsa bildirim göster
-          if (Capacitor.isNativePlatform()) {
-            toast.info(`${customers.length} müşteri yüklendi`, { 
-              duration: 3000 
-            });
-          }
-        } catch (error) {
-          console.error('Müşteri verilerini ayrıştırma hatası:', error);
-        }
+  // Supabase'den verileri yükleme
+  const loadCustomers = async () => {
+    setIsLoading(true);
+    try {
+      const customersData = await fetchCustomers();
+      setCustomers(customersData);
+      setFilteredCustomers(customersData);
+      
+      // Eğer mobil cihazda çalışıyorsa bildirim göster
+      if (Capacitor.isNativePlatform()) {
+        toast.info(`${customersData.length} müşteri yüklendi`, { 
+          duration: 3000 
+        });
       }
+    } catch (error) {
+      console.error('Müşteri verileri yüklenirken hata:', error);
+      toast.error('Müşteri verileri yüklenemedi');
+    } finally {
       setIsLoading(false);
-    };
+    }
+  };
 
-    // Ağ gecikmesi simülasyonu
-    setTimeout(() => {
-      loadSavedCustomers();
-    }, 800);
+  // İlk yükleme
+  useEffect(() => {
+    loadCustomers();
   }, []);
 
-  // Müşteriler değiştiğinde localStorage'a kaydet
-  // Not: Supabase entegrasyonundan sonra bu fonksiyon Supabase'e kaydetme işlemi yapacak
-  useEffect(() => {
-    if (!isLoading) {
-      localStorage.setItem('customers', JSON.stringify(customers));
+  // Müşteri verilerini yenileme fonksiyonu
+  const refreshCustomers = async () => {
+    await loadCustomers();
+  };
+
+  // Yeni müşteri ekleme
+  const addCustomer = async (customerData: Omit<Customer, 'id' | 'filterDates'>) => {
+    const newCustomer = await addCustomerToDb(customerData);
+    
+    if (newCustomer) {
+      setCustomers(prev => [...prev, newCustomer]);
+      setFilteredCustomers(prev => [...prev, newCustomer]);
+      toast.success('Müşteri başarıyla eklendi');
+    } else {
+      toast.error('Müşteri eklenirken bir hata oluştu');
+    }
+  };
+
+  // Müşteri bilgilerini güncelleme
+  const updateCustomer = async (updatedCustomer: Customer) => {
+    const success = await updateCustomerInDb(updatedCustomer);
+    
+    if (success) {
+      setCustomers(prev => 
+        prev.map(customer => 
+          customer.id === updatedCustomer.id ? updatedCustomer : customer
+        )
+      );
+      setFilteredCustomers(prev => 
+        prev.map(customer => 
+          customer.id === updatedCustomer.id ? updatedCustomer : customer
+        )
+      );
+      toast.success('Müşteri bilgileri güncellendi');
+    } else {
+      toast.error('Müşteri güncellenirken bir hata oluştu');
+    }
+  };
+
+  // Müşteri silme
+  const deleteCustomer = async (id: string) => {
+    const success = await deleteCustomerFromDb(id);
+    
+    if (success) {
+      setCustomers(prev => prev.filter(customer => customer.id !== id));
+      setFilteredCustomers(prev => prev.filter(customer => customer.id !== id));
+      toast.success('Müşteri silindi');
+    } else {
+      toast.error('Müşteri silinirken bir hata oluştu');
+    }
+  };
+
+  // Filtre değişimi kaydetme
+  const markFilterChanged = async (customerId: string, filterIndex: number) => {
+    // Önce müşteriyi bul
+    const customer = customers.find(c => c.id === customerId);
+    if (!customer) return;
+    
+    // Filtre değişimini güncelle
+    const filter = customer.filterDates[filterIndex];
+    if (!filter || !filter.id) return;
+    
+    // Veritabanında güncelle
+    const success = await markFilterChangedInDb(filter.id);
+    
+    if (success) {
+      // Belleği güncelle
+      setCustomers(prev => 
+        prev.map(c => {
+          if (c.id === customerId) {
+            const updatedFilterDates = [...c.filterDates];
+            updatedFilterDates[filterIndex] = {
+              ...updatedFilterDates[filterIndex],
+              isChanged: true,
+              changeDate: new Date(),
+            };
+            return { ...c, filterDates: updatedFilterDates };
+          }
+          return c;
+        })
+      );
       
-      // Supabase bağlantısı eklendikten sonra, burada veritabanına senkronizasyon yapılacak
-      // TODO: Supabase bağlantısı eklendiğinde burayı güncelle
+      setFilteredCustomers(prev => 
+        prev.map(c => {
+          if (c.id === customerId) {
+            const updatedFilterDates = [...c.filterDates];
+            updatedFilterDates[filterIndex] = {
+              ...updatedFilterDates[filterIndex],
+              isChanged: true,
+              changeDate: new Date(),
+            };
+            return { ...c, filterDates: updatedFilterDates };
+          }
+          return c;
+        })
+      );
+      
+      toast.success('Filtre değişimi kaydedildi');
+    } else {
+      toast.error('Filtre değişimi kaydedilirken bir hata oluştu');
     }
-  }, [customers, isLoading]);
-
-  const generateFilterDates = (purchaseDate: Date): FilterChange[] => {
-    const filterDates: FilterChange[] = [];
-    // Generate 10 filter changes, 6 months apart
-    for (let i = 0; i < 10; i++) {
-      filterDates.push({
-        date: addMonths(purchaseDate, (i + 1) * 6),
-        isChanged: false,
-      });
-    }
-    return filterDates;
-  };
-
-  const addCustomer = (customerData: Omit<Customer, 'id' | 'filterDates'>) => {
-    const newCustomer: Customer = {
-      ...customerData,
-      id: uuidv4(),
-      filterDates: generateFilterDates(customerData.purchaseDate),
-    };
-
-    setCustomers(prev => [...prev, newCustomer]);
-    setFilteredCustomers(prev => [...prev, newCustomer]);
-    toast.success('Müşteri başarıyla eklendi');
-  };
-
-  const updateCustomer = (updatedCustomer: Customer) => {
-    setCustomers(prev => 
-      prev.map(customer => 
-        customer.id === updatedCustomer.id ? updatedCustomer : customer
-      )
-    );
-    setFilteredCustomers(prev => 
-      prev.map(customer => 
-        customer.id === updatedCustomer.id ? updatedCustomer : customer
-      )
-    );
-    toast.success('Müşteri bilgileri güncellendi');
-  };
-
-  const deleteCustomer = (id: string) => {
-    setCustomers(prev => prev.filter(customer => customer.id !== id));
-    setFilteredCustomers(prev => prev.filter(customer => customer.id !== id));
-    toast.success('Müşteri silindi');
-  };
-
-  const markFilterChanged = (customerId: string, filterIndex: number) => {
-    setCustomers(prev => 
-      prev.map(customer => {
-        if (customer.id === customerId) {
-          const updatedFilterDates = [...customer.filterDates];
-          updatedFilterDates[filterIndex] = {
-            ...updatedFilterDates[filterIndex],
-            isChanged: true,
-            changeDate: new Date(),
-          };
-          return { ...customer, filterDates: updatedFilterDates };
-        }
-        return customer;
-      })
-    );
-    
-    setFilteredCustomers(prev => 
-      prev.map(customer => {
-        if (customer.id === customerId) {
-          const updatedFilterDates = [...customer.filterDates];
-          updatedFilterDates[filterIndex] = {
-            ...updatedFilterDates[filterIndex],
-            isChanged: true,
-            changeDate: new Date(),
-          };
-          return { ...customer, filterDates: updatedFilterDates };
-        }
-        return customer;
-      })
-    );
-    
-    toast.success('Filtre değişimi kaydedildi');
   };
 
   const getFilterStatus = (filterChange: FilterChange): FilterStatus => {
@@ -228,7 +235,8 @@ export const CustomerProvider = ({ children }: CustomerProviderProps) => {
         searchCustomers,
         filteredCustomers,
         setFilteredCustomers,
-        isLoading
+        isLoading,
+        refreshCustomers
       }}
     >
       {children}

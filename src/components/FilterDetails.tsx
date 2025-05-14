@@ -37,6 +37,10 @@ const FilterDetails = ({ customer }: FilterDetailsProps) => {
   
   // Yaklaşan ilk 2 filtreyi göster (daha kompakt görünüm)
   const upcomingFilters = filtersByStatus.upcoming.slice(0, 2);
+
+  const handleFilterChange = (index: number) => {
+    markFilterChanged(customer.id, index);
+  };
   
   return (
     <Card>
@@ -75,7 +79,7 @@ const FilterDetails = ({ customer }: FilterDetailsProps) => {
                     
                     <Button 
                       className="w-full mt-2"
-                      onClick={() => markFilterChanged(customer.id, index)}
+                      onClick={() => handleFilterChange(index)}
                       size="sm"
                       variant="default"
                     >

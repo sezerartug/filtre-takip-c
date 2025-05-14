@@ -40,6 +40,12 @@ const CustomerCard = ({ customer, onEdit, onDelete }: CustomerCardProps) => {
     filter === nextFilter
   );
 
+  const handleFilterChange = () => {
+    if (nextFilterIndex !== -1) {
+      markFilterChanged(customer.id, nextFilterIndex);
+    }
+  };
+
   return (
     <Card className="overflow-hidden card-hover rounded-xl border-input/50">
       <CardContent className="p-0">
@@ -118,7 +124,7 @@ const CustomerCard = ({ customer, onEdit, onDelete }: CustomerCardProps) => {
             {nextFilter && !nextFilter.isChanged && nextFilterIndex !== -1 && (
               <Button 
                 className="w-full mt-4 rounded-lg"
-                onClick={() => markFilterChanged(customer.id, nextFilterIndex)}
+                onClick={handleFilterChange}
                 size="sm"
               >
                 <Check className="mr-2 h-4 w-4" /> Filtre Değişimini Kaydet

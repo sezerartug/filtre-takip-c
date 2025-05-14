@@ -1,3 +1,4 @@
+
 import { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { Customer, FilterChange, FilterStatus } from '../types';
 import { format, addMonths, isAfter, isBefore, isSameDay, startOfDay } from 'date-fns';
@@ -5,6 +6,7 @@ import { tr } from 'date-fns/locale';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
 import { Capacitor } from '@capacitor/core';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   fetchCustomers, 
   addCustomerToDb, 
@@ -51,6 +53,14 @@ export const CustomerProvider = ({ children }: CustomerProviderProps) => {
   const loadCustomers = async () => {
     setIsLoading(true);
     try {
+      // Oturum kontrolü
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.log('Kullanıcı oturumu açık değil');
+        setIsLoading(false);
+        return;
+      }
+      
       const customersData = await fetchCustomers();
       setCustomers(customersData);
       setFilteredCustomers(customersData);
@@ -71,7 +81,22 @@ export const CustomerProvider = ({ children }: CustomerProviderProps) => {
 
   // İlk yükleme
   useEffect(() => {
+    // Oturum değişikliklerini dinle
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN') {
+        loadCustomers();
+      } else if (event === 'SIGNED_OUT') {
+        setCustomers([]);
+        setFilteredCustomers([]);
+      }
+    });
+
+    // Başlangıçta mevcut oturumu kontrol et ve verileri yükle
     loadCustomers();
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   // Müşteri verilerini yenileme fonksiyonu

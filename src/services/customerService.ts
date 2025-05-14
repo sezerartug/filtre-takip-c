@@ -70,6 +70,14 @@ export async function fetchCustomers(): Promise<Customer[]> {
 // Yeni müşteri ekleyen fonksiyon
 export async function addCustomerToDb(customer: Omit<Customer, "id" | "filterDates">): Promise<Customer | null> {
   try {
+    // Önce kullanıcı oturum bilgilerini kontrol et
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      toast.error('Oturum açılmamış. Lütfen giriş yapın.');
+      return null;
+    }
+
+    const userId = session.user.id;
     const newCustomerId = uuidv4();
     
     // Müşteri kaydını oluştur
@@ -80,7 +88,8 @@ export async function addCustomerToDb(customer: Omit<Customer, "id" | "filterDat
         name: customer.name,
         surname: customer.surname,
         address: customer.address,
-        purchase_date: customer.purchaseDate.toISOString()
+        purchase_date: customer.purchaseDate.toISOString(),
+        user_id: userId // Kullanıcı ID'sini ekle
       });
 
     if (customerError) {

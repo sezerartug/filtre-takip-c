@@ -9,14 +9,20 @@ import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider } from "./context/AuthContext";
-import { CustomerProvider } from "./context/CustomerContext";
 import CapacitorApp from "./components/CapacitorApp";
 
 // Capacitor core'u içe aktar
 import { Capacitor } from "@capacitor/core";
 import { useEffect, useState } from "react";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 // Mobil uygulamalar için geri düğmesi işleme fonksiyonu
 // App bileşeni dışında tanımlandı
@@ -59,11 +65,7 @@ const App = () => {
               <Routes>
                 <Route path="/login" element={<Login />} />
                 <Route element={<ProtectedRoute />}>
-                  <Route path="/" element={
-                    <CustomerProvider>
-                      <Index />
-                    </CustomerProvider>
-                  } />
+                  <Route path="/" element={<Index />} />
                   {/* Diğer korumalı rotalar buraya eklenebilir */}
                 </Route>
                 <Route path="*" element={<NotFound />} />

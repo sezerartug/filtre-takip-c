@@ -4,7 +4,9 @@ import { useAuth } from "@/context/AuthContext";
 import { Suspense } from "react";
 
 const ProtectedRoute = () => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
+
+  console.log("ProtectedRoute - Auth durumu:", { isAuthenticated, isLoading, user });
 
   if (isLoading) {
     return (
@@ -19,6 +21,7 @@ const ProtectedRoute = () => {
     return <Navigate to="/login" replace />;
   }
 
+  console.log("Kullanıcı oturum açtı, korumalı içerik görüntüleniyor");
   return (
     <Suspense fallback={
       <div className="flex justify-center items-center min-h-screen">

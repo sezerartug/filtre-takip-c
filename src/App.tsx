@@ -56,6 +56,9 @@ const App = () => {
     }
   }, []);
 
+  // Supabase URL ve key'ini konsola yazdırarak kontrol edelim (geliştirme aşamasında)
+  console.log("Supabase URL ve Key kontrolü yapılıyor...");
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>

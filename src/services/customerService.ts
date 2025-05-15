@@ -10,9 +10,25 @@ export async function fetchCustomers(): Promise<Customer[]> {
   try {
     // Önce oturum kontrolü
     const { data: { session } } = await supabase.auth.getSession();
+    
+    // Oturumu kontrol et, yoksa ve localStorage'da varsa kullan
+    let localUser = null;
     if (!session) {
-      toast.error('Oturum açılmamış. Lütfen giriş yapın.');
-      return [];
+      const storedUserJSON = localStorage.getItem('supabase.auth.token');
+      if (storedUserJSON) {
+        try {
+          localUser = JSON.parse(storedUserJSON);
+          console.log("Yerel oturum bilgisi kullanılıyor:", localUser);
+        } catch (e) {
+          console.error("Yerel oturum bilgisi ayrıştırılamadı:", e);
+        }
+      }
+      
+      if (!localUser) {
+        console.log("Oturum açılmamış ve yerel oturum bilgisi yok.");
+        toast.error('Oturum açılmamış. Lütfen giriş yapın.');
+        return [];
+      }
     }
     
     // Önce müşterileri getir
@@ -79,12 +95,33 @@ export async function addCustomerToDb(customer: Omit<Customer, "id" | "filterDat
   try {
     // Önce kullanıcı oturum bilgilerini kontrol et
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
+    
+    // Oturum yoksa yerel depolama kontrolü
+    let userId = null;
+    
+    if (session && session.user) {
+      userId = session.user.id;
+      console.log("Aktif Supabase oturumu kullanılıyor, userId:", userId);
+    } else {
+      // Yerel depolamadan kullanıcı bilgilerini kontrol et
+      const storedUserJSON = localStorage.getItem('auth.user');
+      if (storedUserJSON) {
+        try {
+          const localUser = JSON.parse(storedUserJSON);
+          userId = localUser.id;
+          console.log("Yerel depolamadan alınan userId:", userId);
+        } catch (e) {
+          console.error("Yerel kullanıcı bilgisi ayrıştırılamadı:", e);
+        }
+      }
+    }
+    
+    if (!userId) {
+      console.error("Kullanıcı kimliği bulunamadı. Oturum açılmamış olabilir.");
       toast.error('Oturum açılmamış. Lütfen giriş yapın.');
       return null;
     }
 
-    const userId = session.user.id;
     const newCustomerId = uuidv4();
     
     console.log("Eklenen müşteri detayları:", {
@@ -106,6 +143,7 @@ export async function addCustomerToDb(customer: Omit<Customer, "id" | "filterDat
       });
 
     if (customerError) {
+      console.error("Müşteri ekleme hatası detayı:", customerError);
       toast.error('Müşteri eklenirken hata: ' + customerError.message);
       throw customerError;
     }
@@ -142,6 +180,7 @@ export async function addCustomerToDb(customer: Omit<Customer, "id" | "filterDat
         .insert(filterInserts);
 
       if (filtersError) {
+        console.error("Filtre planları eklenirken hata detayı:", filtersError);
         toast.error('Filtre planları eklenirken hata: ' + filtersError.message);
         throw filtersError;
       }

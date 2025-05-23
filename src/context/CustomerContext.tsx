@@ -1,4 +1,3 @@
-
 import { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { Customer, FilterChange, FilterStatus } from '../types';
 import { format, addMonths, isAfter, isBefore, isSameDay, startOfDay } from 'date-fns';
@@ -234,15 +233,13 @@ export const CustomerProvider = ({ children }: CustomerProviderProps) => {
     if (!query.trim()) {
       return customers;
     }
-    
-    const lowercaseQuery = query.toLowerCase().trim();
-    
+    const lowercaseQuery = query.toLocaleLowerCase('tr-TR').trim();
     return customers.filter(customer => {
       return (
-        customer.name.toLowerCase().includes(lowercaseQuery) ||
-        customer.surname.toLowerCase().includes(lowercaseQuery) ||
-        customer.address.toLowerCase().includes(lowercaseQuery) ||
-        `${customer.name} ${customer.surname}`.toLowerCase().includes(lowercaseQuery)
+        customer.name.toLocaleLowerCase('tr-TR').includes(lowercaseQuery) ||
+        customer.surname.toLocaleLowerCase('tr-TR').includes(lowercaseQuery) ||
+        customer.address.toLocaleLowerCase('tr-TR').includes(lowercaseQuery) ||
+        `${customer.name} ${customer.surname}`.toLocaleLowerCase('tr-TR').includes(lowercaseQuery)
       );
     });
   };

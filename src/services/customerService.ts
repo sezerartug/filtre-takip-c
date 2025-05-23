@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Customer, FilterChange } from "@/types";
 import { toast } from "sonner";
@@ -104,7 +103,7 @@ export async function addCustomerToDb(customer: Omit<Customer, "id" | "filterDat
       console.log("Aktif Supabase oturumu kullanılıyor, userId:", userId);
     } else {
       // Yerel depolamadan kullanıcı bilgilerini kontrol et
-      const storedUserJSON = localStorage.getItem('auth.user');
+      const storedUserJSON = localStorage.getItem('auth_user');
       if (storedUserJSON) {
         try {
           const localUser = JSON.parse(storedUserJSON);
@@ -131,7 +130,7 @@ export async function addCustomerToDb(customer: Omit<Customer, "id" | "filterDat
     });
     
     // Müşteri kaydını oluştur
-    const { error: customerError } = await supabase
+    const { data: customerData, error: customerError } = await supabase
       .from('customers')
       .insert({
         id: newCustomerId,
@@ -139,38 +138,68 @@ export async function addCustomerToDb(customer: Omit<Customer, "id" | "filterDat
         surname: customer.surname,
         address: customer.address,
         purchase_date: customer.purchaseDate.toISOString(),
-        user_id: userId // Kullanıcı ID'sini ekle
-      });
+        user_id: userId
+      })
+      .select()
+      .single();
 
     if (customerError) {
       console.error("Müşteri ekleme hatası detayı:", customerError);
       toast.error('Müşteri eklenirken hata: ' + customerError.message);
-      throw customerError;
+      return null;
+    }
+
+    if (!customerData) {
+      console.error("Müşteri verisi dönmedi");
+      toast.error('Müşteri eklenirken bir hata oluştu');
+      return null;
     }
 
     // Filtre değişim tarihlerini oluştur
     const filterDates: FilterChange[] = [];
     const filterInserts = [];
     
-    // 10 filtre değişim planı oluştur
-    for (let i = 0; i < 10; i++) {
-      const scheduledDate = addMonths(customer.purchaseDate, (i + 1) * 6);
-      const filterId = uuidv4();
-      
-      // Filtre nesnesi
-      filterDates.push({
-        id: filterId,
-        date: scheduledDate,
-        isChanged: false
-      });
-      
-      // Veritabanına eklemek için hazırla
-      filterInserts.push({
-        id: filterId,
-        customer_id: newCustomerId,
-        scheduled_date: scheduledDate.toISOString(),
-        is_changed: false
-      });
+    // Satın alma tarihinden başlayarak bugüne kadar olan (gecikmiş) ve bugünden sonra ilk gelen (planlanan) filtre tarihlerini oluştur
+    let currentDate = new Date(customer.purchaseDate);
+    const today = new Date();
+    let planlananEklendi = false;
+    let i = 0;
+    while (true) {
+      currentDate = addMonths(customer.purchaseDate, (i + 1) * 6);
+      if (currentDate < today) {
+        // Geciken filtre
+        const filterId = uuidv4();
+        filterDates.push({
+          id: filterId,
+          date: currentDate,
+          isChanged: false
+        });
+        filterInserts.push({
+          id: filterId,
+          customer_id: newCustomerId,
+          scheduled_date: currentDate.toISOString(),
+          is_changed: false
+        });
+      } else if (!planlananEklendi) {
+        // İlk planlanan filtre (bugünden sonraki ilk tarih)
+        const filterId = uuidv4();
+        filterDates.push({
+          id: filterId,
+          date: currentDate,
+          isChanged: false
+        });
+        filterInserts.push({
+          id: filterId,
+          customer_id: newCustomerId,
+          scheduled_date: currentDate.toISOString(),
+          is_changed: false
+        });
+        planlananEklendi = true;
+        break;
+      } else {
+        break;
+      }
+      i++;
     }
 
     // Filtre değişimlerini ekle
@@ -182,7 +211,7 @@ export async function addCustomerToDb(customer: Omit<Customer, "id" | "filterDat
       if (filtersError) {
         console.error("Filtre planları eklenirken hata detayı:", filtersError);
         toast.error('Filtre planları eklenirken hata: ' + filtersError.message);
-        throw filtersError;
+        return null;
       }
     }
 
@@ -194,6 +223,7 @@ export async function addCustomerToDb(customer: Omit<Customer, "id" | "filterDat
     };
   } catch (error) {
     console.error('Müşteri ekleme hatası:', error);
+    toast.error('Müşteri eklenirken bir hata oluştu');
     return null;
   }
 }

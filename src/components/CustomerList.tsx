@@ -11,6 +11,7 @@ import { Customer, FilterStatus } from "@/types";
 import { Search, Plus, FileText, Info, Edit, Trash2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { exportToPDF } from "@/utils/pdfExport";
+import { exportToExcel } from "@/utils/excelExport";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDate } from "@/utils/helpers";
 import { addMonths, isEqual, isSameDay, startOfDay, isBefore, isAfter } from "date-fns";
@@ -68,8 +69,23 @@ const CustomerList = () => {
     exportToPDF(customersToExport);
   };
   
+  const handleExportToExcel = () => {
+    let customersToExport = filteredCustomers;
+    if (activeTab === "planned") {
+      customersToExport = getPlannedCustomers();
+    } else if (activeTab === "overdue") {
+      customersToExport = getOverdueCustomers();
+    }
+    exportToExcel(customersToExport);
+  };
+  
   const handleTabChange = (value: string) => {
     setActiveTab(value);
+    if (!searchQuery.trim()) {
+      setFilteredCustomers(customers);
+    } else {
+      setFilteredCustomers(searchCustomers(searchQuery));
+    }
   };
   
   // Planlanan filtre değişimi olan müşterileri filtrele
@@ -172,11 +188,11 @@ const CustomerList = () => {
           <Button 
             variant="outline" 
             size="sm" 
-            onClick={handleExportToPDF}
+            onClick={handleExportToExcel}
             className="rounded-xl h-9 shadow-sm"
           >
-            <FileText className="h-4 w-4 mr-2" />
-            PDF Olarak İndir
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" className="mr-2"><path d="M5.884 6.68a.5.5 0 0 1 .09.638l-2.5 4a.5.5 0 1 1-.848-.53l2.5-4a.5.5 0 0 1 .758-.108zm4.232 0a.5.5 0 0 0-.758-.108l-2.5 4a.5.5 0 1 0 .848.53l2.5-4a.5.5 0 0 0-.09-.638z"/><path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4.5A1.5 1.5 0 0 1 3.5 3h9A1.5 1.5 0 0 1 14 4.5zm-1 0A.5.5 0 0 0 12.5 4h-9a.5.5 0 0 0-.5.5V14a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5z"/></svg>
+            Excel Olarak İndir
           </Button>
         </div>
       </div>

@@ -7,7 +7,7 @@ interface AppHeaderProps {
   title?: string;
 }
 
-const AppHeader = ({ title = "Su Arıtma Filtre Takip" }: AppHeaderProps) => {
+const AppHeader = ({ title = "Su Arıtma Filtre Takip Sistemi" }: AppHeaderProps) => {
   const { user, logout } = useAuth();
 
   return (

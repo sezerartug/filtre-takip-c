@@ -4,6 +4,18 @@ import { toast } from "sonner";
 import { addMonths } from "date-fns";
 import { v4 as uuidv4 } from 'uuid';
 
+interface DbCustomer {
+  id: string;
+  name: string;
+  surname: string;
+  address: string;
+  phone: string;
+  purchase_date: string;
+  created_at: string;
+  updated_at: string;
+  user_id: string;
+}
+
 // Müşteri verilerini Supabase'den getiren fonksiyon
 export async function fetchCustomers(): Promise<Customer[]> {
   try {
@@ -57,7 +69,7 @@ export async function fetchCustomers(): Promise<Customer[]> {
     }
 
     // Müşteri ve filtre verilerini birleştir
-    const customers: Customer[] = customersData.map(customer => {
+    const customers: Customer[] = (customersData as DbCustomer[]).map(customer => {
       // Bu müşteriye ait filtreleri bul
       const customerFilters = filtersData?.filter(
         filter => filter.customer_id === customer.id
@@ -77,6 +89,7 @@ export async function fetchCustomers(): Promise<Customer[]> {
         name: customer.name,
         surname: customer.surname,
         address: customer.address,
+        phone: customer.phone || '',
         purchaseDate: new Date(customer.purchase_date),
         filterDates: filterDates
       };
@@ -137,6 +150,7 @@ export async function addCustomerToDb(customer: Omit<Customer, "id" | "filterDat
         name: customer.name,
         surname: customer.surname,
         address: customer.address,
+        phone: customer.phone,
         purchase_date: customer.purchaseDate.toISOString(),
         user_id: userId
       })
@@ -238,6 +252,7 @@ export async function updateCustomerInDb(customer: Customer): Promise<boolean> {
         name: customer.name,
         surname: customer.surname,
         address: customer.address,
+        phone: customer.phone,
         purchase_date: customer.purchaseDate.toISOString(),
         updated_at: new Date().toISOString()
       })

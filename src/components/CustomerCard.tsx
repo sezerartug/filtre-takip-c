@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Customer, FilterStatus } from "@/types";
 import { useCustomers } from "@/context/CustomerContext";
@@ -80,6 +79,10 @@ const CustomerCard = ({ customer, onEdit, onDelete }: CustomerCardProps) => {
             <p className="text-sm text-muted-foreground flex items-center mt-1">
               <MapPin className="h-3.5 w-3.5 mr-1.5 text-muted-foreground/70" />
               {customer.address}
+            </p>
+            <p className="text-sm text-muted-foreground flex items-center mt-1">
+              <span className="inline-block w-4 mr-1.5">📞</span>
+              {customer.phone}
             </p>
             
             <div className="mt-4 space-y-3">

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -33,6 +32,7 @@ type FormValues = {
   name: string;
   surname: string;
   address: string;
+  phone: string;
   purchaseDate: Date;
 };
 
@@ -45,6 +45,7 @@ export const CustomerForm = ({ customer, onClose }: CustomerFormProps) => {
       name: customer?.name || "",
       surname: customer?.surname || "",
       address: customer?.address || "",
+      phone: customer?.phone || "",
       purchaseDate: customer?.purchaseDate || new Date(),
     },
   });
@@ -56,6 +57,7 @@ export const CustomerForm = ({ customer, onClose }: CustomerFormProps) => {
         name: data.name,
         surname: data.surname,
         address: data.address,
+        phone: data.phone,
         purchaseDate: data.purchaseDate,
       });
     } else {
@@ -91,6 +93,39 @@ export const CustomerForm = ({ customer, onClose }: CustomerFormProps) => {
               <FormLabel>Soyad</FormLabel>
               <FormControl>
                 <Input placeholder="Soyad" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        <FormField
+          control={form.control}
+          name="phone"
+          rules={{ 
+            required: "Telefon numarası gereklidir",
+            pattern: {
+              value: /^[0-9]{10}$/,
+              message: "Geçerli bir telefon numarası giriniz (5XX XXX XX XX)"
+            },
+            minLength: { value: 10, message: "Telefon numarası 10 haneli olmalı" },
+            maxLength: { value: 10, message: "Telefon numarası 10 haneli olmalı" }
+          }}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Telefon Numarası</FormLabel>
+              <FormControl>
+                <Input 
+                  placeholder="5XX XXX XX XX" 
+                  {...field} 
+                  maxLength={10}
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  onInput={e => {
+                    const value = e.target.value.replace(/[^0-9]/g, '');
+                    field.onChange(value);
+                  }}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>

@@ -1,4 +1,3 @@
-
 export interface FilterChange {
   date: Date;
   isChanged: boolean;
@@ -11,6 +10,7 @@ export interface Customer {
   name: string;
   surname: string;
   address: string;
+  phone: string;
   purchaseDate: Date;
   filterDates: FilterChange[];
 }

@@ -34,6 +34,8 @@ type FormValues = {
   address: string;
   phone: string;
   purchaseDate: Date;
+  productName: string;
+  productPrice: number;
 };
 
 export const CustomerForm = ({ customer, onClose }: CustomerFormProps) => {
@@ -47,6 +49,8 @@ export const CustomerForm = ({ customer, onClose }: CustomerFormProps) => {
       address: customer?.address || "",
       phone: customer?.phone || "",
       purchaseDate: customer?.purchaseDate || new Date(),
+      productName: "",
+      productPrice: 0,
     },
   });
 
@@ -187,6 +191,36 @@ export const CustomerForm = ({ customer, onClose }: CustomerFormProps) => {
                   />
                 </PopoverContent>
               </Popover>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        <FormField
+          control={form.control}
+          name="productName"
+          rules={{ required: "Satın alınan ürün gereklidir" }}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Satın Alınan Ürün</FormLabel>
+              <FormControl>
+                <Input placeholder="Ürün adı" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        <FormField
+          control={form.control}
+          name="productPrice"
+          rules={{ required: "Ürün fiyatı gereklidir", min: { value: 1, message: "Fiyat pozitif olmalı" } }}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Ürün Fiyatı (TL)</FormLabel>
+              <FormControl>
+                <Input type="number" placeholder="Fiyat" {...field} min={1} />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}

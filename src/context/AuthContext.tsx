@@ -41,13 +41,7 @@ const DEMO_USERS = [
     password: 'admin123',
     role: 'admin' as const,
   },
-  {
-    id: '2',
-    username: 'teknisyen',
-    email: 'teknisyen@deneme.com',
-    password: '123456',
-    role: 'user' as const,
-  }
+  // Eğer user rolü olacaksa buraya ekleyebilirsin
 ];
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
@@ -148,6 +142,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
               email: email,
               password: password,
+              options: {
+                data: {
+                  role: foundUser.role,
+                  username: foundUser.username
+                }
+              }
             });
             
             if (signUpError) {

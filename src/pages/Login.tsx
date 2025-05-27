@@ -67,7 +67,7 @@ const Login = () => {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-2xl font-bold">Su Arıtma Filtre Takip</CardTitle>
+          <CardTitle className="text-2xl font-bold">Su Arıtma Cihazı Takip Sistemi</CardTitle>
           <CardDescription>
             Lütfen giriş bilgilerinizi giriniz
           </CardDescription>
@@ -124,7 +124,7 @@ const Login = () => {
         </CardContent>
         <CardFooter className="flex justify-center">
           <p className="text-sm text-muted-foreground">
-            © 2024 Su Arıtma Filtre Takip Uygulaması
+          Copyright ©  All Right Reserved. Developer by SezerArtug
           </p>
         </CardFooter>
       </Card>

@@ -13,6 +13,8 @@ export interface Customer {
   phone: string;
   purchaseDate: Date;
   filterDates: FilterChange[];
+  productName?: string;
+  productPrice?: number;
 }
 
 export enum FilterStatus {

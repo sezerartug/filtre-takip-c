@@ -53,7 +53,7 @@ const Index = () => {
 
         {/* Footer */}
         <footer className="bg-card border-t p-4 text-center text-sm text-muted-foreground">
-          <p>© 2024 Su Arıtma Filtre Takip Uygulaması</p>
+          <p>© 2025 Su Arıtma Filtre Takip Uygulaması</p>
         </footer>
       </div>
     </CustomerProvider>

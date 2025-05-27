@@ -16,9 +16,10 @@ interface CustomerCardProps {
   customer: Customer;
   onEdit: (customer: Customer) => void;
   onDelete: (customer: Customer) => void;
+  onNameClick?: (customer: Customer) => void;
 }
 
-const CustomerCard = ({ customer, onEdit, onDelete }: CustomerCardProps) => {
+const CustomerCard = ({ customer, onEdit, onDelete, onNameClick }: CustomerCardProps) => {
   const { getFilterStatus, getNextFilterChange, markFilterChanged } = useCustomers();
   
   const nextFilter = getNextFilterChange(customer);
@@ -55,7 +56,14 @@ const CustomerCard = ({ customer, onEdit, onDelete }: CustomerCardProps) => {
           {/* Main content */}
           <div className="p-5">
             <div className="flex justify-between items-start">
-              <h3 className="text-lg font-medium">{customer.name} {customer.surname}</h3>
+              <button
+                className="text-lg font-medium hover:underline text-left bg-transparent border-0 p-0 m-0 cursor-pointer"
+                style={{ background: "none" }}
+                onClick={() => onNameClick && onNameClick(customer)}
+                type="button"
+              >
+                {customer.name} {customer.surname}
+              </button>
               <div className="flex space-x-1">
                 <Button 
                   variant="ghost" 

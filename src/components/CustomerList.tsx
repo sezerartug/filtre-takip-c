@@ -15,6 +15,7 @@ import { exportToExcel } from "@/utils/excelExport";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDate } from "@/utils/helpers";
 import { addMonths, isEqual, isSameDay, startOfDay, isBefore, isAfter } from "date-fns";
+import CustomerDetailDialog from "./CustomerDetailDialog";
 
 const CustomerList = () => {
   const { customers, filteredCustomers, searchCustomers, setFilteredCustomers, deleteCustomer, getFilterStatus } = useCustomers();
@@ -24,6 +25,7 @@ const CustomerList = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [activeTab, setActiveTab] = useState("all");
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
@@ -147,6 +149,11 @@ const CustomerList = () => {
   
   const customersToShow = getCustomersForActiveTab();
   
+  const handleNameClick = (customer: Customer) => {
+    setSelectedCustomer(customer);
+    setIsDetailDialogOpen(true);
+  };
+  
   return (
     <div className="space-y-5 animate-fade-in">
       <div className="space-y-3">
@@ -223,6 +230,7 @@ const CustomerList = () => {
                   customer={customer}
                   onEdit={handleEditClick}
                   onDelete={handleDeleteClick}
+                  onNameClick={handleNameClick}
                 />
               </div>
             ))
@@ -241,6 +249,7 @@ const CustomerList = () => {
                   customer={customer}
                   onEdit={handleEditClick}
                   onDelete={handleDeleteClick}
+                  onNameClick={handleNameClick}
                 />
               </div>
             ))
@@ -259,6 +268,7 @@ const CustomerList = () => {
                   customer={customer}
                   onEdit={handleEditClick}
                   onDelete={handleDeleteClick}
+                  onNameClick={handleNameClick}
                 />
               </div>
             ))
@@ -310,6 +320,12 @@ const CustomerList = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      <CustomerDetailDialog 
+        open={isDetailDialogOpen}
+        onOpenChange={setIsDetailDialogOpen}
+        customer={selectedCustomer}
+      />
     </div>
   );
 };

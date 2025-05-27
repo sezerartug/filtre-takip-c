@@ -69,7 +69,7 @@ export async function fetchCustomers(): Promise<Customer[]> {
     }
 
     // Müşteri ve filtre verilerini birleştir
-    const customers: Customer[] = (customersData as DbCustomer[]).map(customer => {
+    const customers: Customer[] = await Promise.all((customersData as DbCustomer[]).map(async customer => {
       // Bu müşteriye ait filtreleri bul
       const customerFilters = filtersData?.filter(
         filter => filter.customer_id === customer.id
@@ -83,6 +83,19 @@ export async function fetchCustomers(): Promise<Customer[]> {
         id: filter.id
       }));
 
+      // Ürün bilgisini çek
+      let productName = undefined;
+      let productPrice = undefined;
+      const { data: productData } = await supabase
+        .from('products')
+        .select('*')
+        .eq('customer_id', customer.id)
+        .single();
+      if (productData) {
+        productName = productData.name;
+        productPrice = productData.price;
+      }
+
       // Müşteri nesnesini oluştur
       return {
         id: customer.id,
@@ -91,9 +104,11 @@ export async function fetchCustomers(): Promise<Customer[]> {
         address: customer.address,
         phone: customer.phone || '',
         purchaseDate: new Date(customer.purchase_date),
-        filterDates: filterDates
+        filterDates: filterDates,
+        productName,
+        productPrice
       };
-    });
+    }));
 
     return customers;
   } catch (error) {
@@ -103,7 +118,7 @@ export async function fetchCustomers(): Promise<Customer[]> {
 }
 
 // Yeni müşteri ekleyen fonksiyon
-export async function addCustomerToDb(customer: Omit<Customer, "id" | "filterDates">): Promise<Customer | null> {
+export async function addCustomerToDb(customer: Omit<Customer, "id" | "filterDates"> & { productName: string; productPrice: number }): Promise<Customer | null> {
   try {
     // Önce kullanıcı oturum bilgilerini kontrol et
     const { data: { session } } = await supabase.auth.getSession();
@@ -167,6 +182,26 @@ export async function addCustomerToDb(customer: Omit<Customer, "id" | "filterDat
       console.error("Müşteri verisi dönmedi");
       toast.error('Müşteri eklenirken bir hata oluştu');
       return null;
+    }
+
+    // Ürün bilgisini products tablosuna ekle
+    const { error: productError } = await supabase
+      .from('products')
+      .insert({
+        id: uuidv4(),
+        name: customer.productName,
+        price: customer.productPrice,
+        customer_id: newCustomerId,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (productError) {
+      console.error("Ürün eklenirken hata detayı:", productError);
+      toast.error('Ürün eklenirken hata: ' + productError.message);
+      // müşteri eklendi ama ürün eklenemedi, yine de devam et
     }
 
     // Filtre değişim tarihlerini oluştur
@@ -313,14 +348,27 @@ export async function updateCustomerInDb(customer: Customer): Promise<boolean> {
 // Müşteri silen fonksiyon
 export async function deleteCustomerFromDb(customerId: string): Promise<boolean> {
   try {
-    // Cascade delete olduğu için sadece müşteriyi silmek yeterli
-    const { error } = await supabase
+    // Önce ürün bilgilerini sil
+    const { error: productError } = await supabase
+      .from('products')
+      .delete()
+      .eq('customer_id', customerId);
+
+    if (productError) {
+      console.error("Ürün silme hatası:", productError);
+      toast.error('Ürün bilgileri silinirken hata: ' + productError.message);
+      return false;
+    }
+
+    // Sonra müşteriyi sil
+    const { error: customerError } = await supabase
       .from('customers')
       .delete()
       .eq('id', customerId);
 
-    if (error) {
-      toast.error('Müşteri silinirken hata: ' + error.message);
+    if (customerError) {
+      console.error("Müşteri silme hatası:", customerError);
+      toast.error('Müşteri silinirken hata: ' + customerError.message);
       return false;
     }
 
@@ -351,5 +399,71 @@ export async function markFilterChangedInDb(filterId: string): Promise<boolean> 
   } catch (error) {
     console.error('Filtre değişimi güncellenirken hata:', error);
     return false;
+  }
+}
+
+// Tek bir müşteriyi ID'ye göre getiren fonksiyon
+export async function fetchCustomerById(customerId: string): Promise<Customer | null> {
+  try {
+    const { data: customerData, error: customerError } = await supabase
+      .from('customers')
+      .select('*')
+      .eq('id', customerId)
+      .single();
+
+    if (customerError) {
+      toast.error('Müşteri verisi yüklenirken hata: ' + customerError.message);
+      throw customerError;
+    }
+
+    if (!customerData) {
+      return null;
+    }
+
+    // Müşterinin filtre değişimlerini getir
+    const { data: filtersData, error: filtersError } = await supabase
+      .from('filter_changes')
+      .select('*')
+      .eq('customer_id', customerId);
+
+    if (filtersError) {
+      toast.error('Filtre verileri yüklenirken hata: ' + filtersError.message);
+      throw filtersError;
+    }
+
+    // Müşterinin ürün bilgilerini getir
+    const { data: productData, error: productError } = await supabase
+      .from('products')
+      .select('*')
+      .eq('customer_id', customerId)
+      .single();
+
+    if (productError && productError.code !== 'PGRST116') { // PGRST116: no rows returned
+      toast.error('Ürün verileri yüklenirken hata: ' + productError.message);
+      throw productError;
+    }
+
+    // Customer tipine dönüştür
+    const customer: Customer = {
+      id: customerData.id,
+      name: customerData.name,
+      surname: customerData.surname,
+      address: customerData.address,
+      phone: customerData.phone,
+      purchaseDate: new Date(customerData.purchase_date),
+      filterDates: filtersData.map(filter => ({
+        id: filter.id,
+        date: new Date(filter.scheduled_date),
+        isChanged: filter.is_changed,
+        changeDate: filter.change_date ? new Date(filter.change_date) : undefined
+      })),
+      productName: productData?.name || '',
+      productPrice: productData?.price || 0
+    };
+
+    return customer;
+  } catch (error) {
+    console.error('Müşteri getirme hatası:', error);
+    return null;
   }
 }

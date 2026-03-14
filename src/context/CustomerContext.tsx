@@ -118,6 +118,26 @@ export const CustomerProvider = ({ children }: CustomerProviderProps) => {
 
   // Müşteri bilgilerini güncelleme
   const updateCustomer = async (updatedCustomer: Customer) => {
+    // Mevcut müşteriyi bul ve satın alma tarihi değiştiyse, planlı filtre tarihlerini buna göre güncelle
+    const existing = customers.find((c) => c.id === updatedCustomer.id);
+    if (existing) {
+      const purchaseChanged =
+        existing.purchaseDate.getTime() !== updatedCustomer.purchaseDate.getTime();
+      const hasAnyChangeHistory = existing.filterDates.some((f) => f.isChanged);
+
+      // Eğer daha önce hiç filtre değişimi yapılmadıysa, mevcut planlı filtreleri yeni satın alma tarihine göre kaydır
+      if (purchaseChanged && !hasAnyChangeHistory && existing.filterDates.length > 0) {
+        const recalculatedFilterDates: FilterChange[] = existing.filterDates.map((f, index) => ({
+          ...f,
+          date: addMonths(updatedCustomer.purchaseDate, (index + 1) * 12),
+        }));
+        updatedCustomer = {
+          ...updatedCustomer,
+          filterDates: recalculatedFilterDates,
+        };
+      }
+    }
+
     const success = await updateCustomerInDb(updatedCustomer);
     
     if (success) {
@@ -150,55 +170,78 @@ export const CustomerProvider = ({ children }: CustomerProviderProps) => {
     }
   };
 
-  // Filtre değişimi kaydetme
+  // Filtre değişimi kaydetme (otomatik yıllık akış)
   const markFilterChanged = async (customerId: string, filterIndex: number) => {
-    // Önce müşteriyi bul
-    const customer = customers.find(c => c.id === customerId);
+    const customer = customers.find((c) => c.id === customerId);
     if (!customer) return;
-    
-    // Filtre değişimini güncelle
+
     const filter = customer.filterDates[filterIndex];
     if (!filter || !filter.id) return;
-    
-    // Veritabanında güncelle
+
+    // Tamamlanan planın tarihi baz alınsın
+    const completedAt = filter.date instanceof Date ? filter.date : new Date(filter.date);
+
+    // Veritabanında mevcut kaydı güncelle
     const success = await markFilterChangedInDb(filter.id);
-    
-    if (success) {
-      // Belleği güncelle
-      setCustomers(prev => 
-        prev.map(c => {
-          if (c.id === customerId) {
-            const updatedFilterDates = [...c.filterDates];
-            updatedFilterDates[filterIndex] = {
-              ...updatedFilterDates[filterIndex],
-              isChanged: true,
-              changeDate: new Date(),
-            };
-            return { ...c, filterDates: updatedFilterDates };
-          }
-          return c;
-        })
-      );
-      
-      setFilteredCustomers(prev => 
-        prev.map(c => {
-          if (c.id === customerId) {
-            const updatedFilterDates = [...c.filterDates];
-            updatedFilterDates[filterIndex] = {
-              ...updatedFilterDates[filterIndex],
-              isChanged: true,
-              changeDate: new Date(),
-            };
-            return { ...c, filterDates: updatedFilterDates };
-          }
-          return c;
-        })
-      );
-      
-      toast.success('Filtre değişimi kaydedildi');
-    } else {
-      toast.error('Filtre değişimi kaydedilirken bir hata oluştu');
+
+    if (!success) {
+      toast.error("Filtre değişimi kaydedilirken bir hata oluştu");
+      return;
     }
+
+    // Bir yıl sonrasını, tamamlanan plan tarihine göre planla
+    const nextDate = addMonths(completedAt, 12);
+
+    try {
+      await supabase.from("filter_changes").insert({
+        customer_id: customerId,
+        scheduled_date: nextDate.toISOString(),
+        is_changed: false,
+      });
+    } catch (e) {
+      console.error("Yeni filtre planlanırken hata:", e);
+    }
+
+    // Belleği güncelle
+    setCustomers((prev) =>
+      prev.map((c) => {
+        if (c.id === customerId) {
+          const updatedFilterDates = [...c.filterDates];
+          updatedFilterDates[filterIndex] = {
+            ...updatedFilterDates[filterIndex],
+            isChanged: true,
+            changeDate: completedAt,
+          };
+          updatedFilterDates.push({
+            date: nextDate,
+            isChanged: false,
+          });
+          return { ...c, filterDates: updatedFilterDates };
+        }
+        return c;
+      })
+    );
+
+    setFilteredCustomers((prev) =>
+      prev.map((c) => {
+        if (c.id === customerId) {
+          const updatedFilterDates = [...c.filterDates];
+          updatedFilterDates[filterIndex] = {
+            ...updatedFilterDates[filterIndex],
+            isChanged: true,
+            changeDate: completedAt,
+          };
+          updatedFilterDates.push({
+            date: nextDate,
+            isChanged: false,
+          });
+          return { ...c, filterDates: updatedFilterDates };
+        }
+        return c;
+      })
+    );
+
+    toast.success("Filtre değişimi kaydedildi");
   };
 
   const getFilterStatus = (filterChange: FilterChange): FilterStatus => {
@@ -219,14 +262,54 @@ export const CustomerProvider = ({ children }: CustomerProviderProps) => {
   };
 
   const getNextFilterChange = (customer: Customer): FilterChange | null => {
-    const today = new Date();
-    
-    // Find the next filter change that isn't completed yet
-    const nextFilter = customer.filterDates
-      .filter(filter => !filter.isChanged || isAfter(filter.date, today))
-      .sort((a, b) => a.date.getTime() - b.date.getTime())[0];
-      
-    return nextFilter || null;
+    const filters = customer.filterDates;
+    if (!filters || filters.length === 0) return null;
+
+    const uncompleted = filters.filter((f) => !f.isChanged);
+    if (uncompleted.length === 0) return null;
+
+    const today = startOfDay(new Date());
+
+    // Satın alma tarihi ve son değişim tarihinden bugüne en yakın olanı baz al
+    const purchaseDate = startOfDay(new Date(customer.purchaseDate));
+
+    const lastChanged = [...filters]
+      .filter((f) => f.isChanged && f.changeDate)
+      .sort((a, b) => (b.changeDate!.getTime() - a.changeDate!.getTime()))[0];
+
+    const lastChangeDate = lastChanged?.changeDate
+      ? startOfDay(new Date(lastChanged.changeDate))
+      : null;
+
+    let baseDate = purchaseDate;
+    if (lastChangeDate) {
+      const diffPurchase = Math.abs(today.getTime() - purchaseDate.getTime());
+      const diffLastChange = Math.abs(today.getTime() - lastChangeDate.getTime());
+      baseDate = diffLastChange <= diffPurchase ? lastChangeDate : purchaseDate;
+    }
+
+    const idealNext = addMonths(baseDate, 12);
+
+    // Baz tarihten sonraki planlı kayıtlar arasından, ideal tarihe en yakın olanı seç
+    let best: FilterChange | null = null;
+    let bestDiff = Number.POSITIVE_INFINITY;
+
+    for (const f of uncompleted) {
+      const date = startOfDay(new Date(f.date));
+      if (date.getTime() < baseDate.getTime()) continue;
+      const diff = Math.abs(date.getTime() - idealNext.getTime());
+      if (diff < bestDiff) {
+        bestDiff = diff;
+        best = f;
+      }
+    }
+
+    // Hiç uygun aday bulunamazsa, genel olarak en erken planlı tarihi dön
+    if (!best) {
+      best = uncompleted.sort((a, b) => a.date.getTime() - b.date.getTime())[0];
+    }
+
+    return best;
   };
 
   const searchCustomers = (query: string): Customer[] => {

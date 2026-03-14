@@ -6,6 +6,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import Schedule from "./pages/Schedule";
+import Payments from "./pages/Payments";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider } from "./context/AuthContext";
@@ -67,9 +71,12 @@ const App = () => {
             <BrowserRouter>
               <Routes>
                 <Route path="/login" element={<Login />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
                 <Route element={<ProtectedRoute />}>
                   <Route path="/" element={<Index />} />
-                  {/* Diğer korumalı rotalar buraya eklenebilir */}
+                  <Route path="/schedule" element={<Schedule />} />
+                  <Route path="/payments" element={<Payments />} />
                 </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>

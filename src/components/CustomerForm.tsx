@@ -49,8 +49,8 @@ export const CustomerForm = ({ customer, onClose }: CustomerFormProps) => {
       address: customer?.address || "",
       phone: customer?.phone || "",
       purchaseDate: customer?.purchaseDate || new Date(),
-      productName: "",
-      productPrice: 0,
+      productName: customer?.productName || "",
+      productPrice: customer?.productPrice ?? 0,
     },
   });
 
@@ -63,6 +63,8 @@ export const CustomerForm = ({ customer, onClose }: CustomerFormProps) => {
         address: data.address,
         phone: data.phone,
         purchaseDate: data.purchaseDate,
+        productName: data.productName,
+        productPrice: data.productPrice,
       });
     } else {
       addCustomer(data);

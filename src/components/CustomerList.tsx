@@ -14,11 +14,11 @@ import { exportToPDF } from "@/utils/pdfExport";
 import { exportToExcel } from "@/utils/excelExport";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDate } from "@/utils/helpers";
-import { addMonths, isEqual, isSameDay, startOfDay, isBefore, isAfter } from "date-fns";
+import { addMonths, isEqual, isSameDay, startOfDay, isBefore, isAfter, differenceInCalendarDays } from "date-fns";
 import CustomerDetailDialog from "./CustomerDetailDialog";
 
 const CustomerList = () => {
-  const { customers, filteredCustomers, searchCustomers, setFilteredCustomers, deleteCustomer, getFilterStatus } = useCustomers();
+  const { customers, filteredCustomers, searchCustomers, setFilteredCustomers, deleteCustomer, getFilterStatus, getNextFilterChange } = useCustomers();
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -26,6 +26,7 @@ const CustomerList = () => {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [activeTab, setActiveTab] = useState("all");
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  const [detailTab, setDetailTab] = useState<"overview" | "filters" | "payments">("overview");
   
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
@@ -90,48 +91,50 @@ const CustomerList = () => {
     }
   };
   
-  // Planlanan filtre değişimi olan müşterileri filtrele
+  // Planlanan filtre değişimi olan müşterileri filtrele (yaklaşan)
   const getPlannedCustomers = () => {
     const today = startOfDay(new Date());
     
-    return customers.filter(customer => {
-      // Henüz değiştirilmemiş filtreleri bul
-      const uncompletedFilters = customer.filterDates.filter(filter => !filter.isChanged);
-      
-      // Her bir değiştirilmemiş filtre için kontrol et
-      for (const filter of uncompletedFilters) {
-        const filterDate = startOfDay(new Date(filter.date));
-        
-        // Bugün tam olarak filtre değişim günü mü?
-        if (isSameDay(filterDate, today)) {
-          return true;
+    const planned = customers
+      .map((customer) => {
+        const next = getNextFilterChange(customer);
+        if (!next) return null;
+        const nextDate = startOfDay(new Date(next.date));
+        if (isAfter(nextDate, today) || isSameDay(nextDate, today)) {
+          return { customer, nextDate };
         }
-      }
-      
-      return false;
-    });
+        return null;
+      })
+      .filter((item): item is { customer: Customer; nextDate: Date } => item !== null)
+      .sort((a, b) => a.nextDate.getTime() - b.nextDate.getTime());
+
+    return planned.map((item) => item.customer);
   };
   
-  // Geciken filtre değişimi olan müşterileri filtrele
-  const getOverdueCustomers = () => {
+  // Bir müşteri için en erken GECİKMİŞ filtre tarihini bul
+  const getFirstOverdueDate = (customer: Customer) => {
     const today = startOfDay(new Date());
-    
-    return customers.filter(customer => {
-      // Henüz değiştirilmemiş filtreleri bul
-      const uncompletedFilters = customer.filterDates.filter(filter => !filter.isChanged);
-      
-      // Her bir değiştirilmemiş filtre için kontrol et
-      for (const filter of uncompletedFilters) {
-        const filterDate = startOfDay(new Date(filter.date));
-        
-        // Filtre değişim günü geçmiş mi?
-        if (isAfter(today, filterDate)) {
-          return true;
-        }
-      }
-      
-      return false;
-    });
+    const uncompleted = customer.filterDates.filter(f => !f.isChanged);
+    const overdueDates = uncompleted
+      .map(f => startOfDay(new Date(f.date)))
+      .filter(d => isBefore(d, today));
+    if (overdueDates.length === 0) return null;
+    overdueDates.sort((a, b) => a.getTime() - b.getTime());
+    return overdueDates[0];
+  };
+
+  // Geciken filtre değişimi olan müşterileri filtrele (ilk gecikmiş tarihe göre)
+  const getOverdueCustomers = () => {
+    const overdue = customers
+      .map((customer) => {
+        const firstOverdue = getFirstOverdueDate(customer);
+        if (!firstOverdue) return null;
+        return { customer, nextDate: firstOverdue };
+      })
+      .filter((item): item is { customer: Customer; nextDate: Date } => item !== null)
+      .sort((a, b) => a.nextDate.getTime() - b.nextDate.getTime());
+
+    return overdue;
   };
   
   // İlgili tab için müşteri listesini elde et
@@ -140,7 +143,7 @@ const CustomerList = () => {
       case "planned":
         return getPlannedCustomers();
       case "overdue":
-        return getOverdueCustomers();
+        return getOverdueCustomers().map((item) => item.customer);
       case "all":
       default:
         return filteredCustomers;
@@ -148,15 +151,29 @@ const CustomerList = () => {
   };
   
   const customersToShow = getCustomersForActiveTab();
-  
-  const handleNameClick = (customer: Customer) => {
+ 
+  const openDetail = (customer: Customer, tab: "overview" | "filters" | "payments") => {
     setSelectedCustomer(customer);
+    setDetailTab(tab);
     setIsDetailDialogOpen(true);
+  };
+
+  const handleNameClick = (customer: Customer) => {
+    openDetail(customer, "overview");
+  };
+
+  const handleOpenFilters = (customer: Customer) => {
+    openDetail(customer, "filters");
+  };
+
+  const handleOpenPayments = (customer: Customer) => {
+    openDetail(customer, "payments");
   };
   
   return (
-    <div className="space-y-5 animate-fade-in">
-      <div className="space-y-3">
+    <div className="space-y-6 animate-fade-in">
+      <div className="space-y-4">
+        {/* Arama ve aksiyonlar */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <div className="relative flex-1">
             <Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" />
@@ -186,6 +203,32 @@ const CustomerList = () => {
               <span className="sr-only">Yeni müşteri ekle</span>
             </Button>
           </div>
+        </div>
+        
+        {/* Özet kartlar */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Card className="glass-effect border-none shadow-sm">
+            <CardContent className="py-4">
+              <p className="text-xs text-muted-foreground mb-1">Toplam müşteri</p>
+              <p className="text-2xl font-semibold">{customers.length}</p>
+            </CardContent>
+          </Card>
+          <Card className="glass-effect border-none shadow-sm">
+            <CardContent className="py-4">
+              <p className="text-xs text-muted-foreground mb-1">Bugün planlanan değişim</p>
+              <p className="text-2xl font-semibold text-amber-600 dark:text-amber-400">
+                {getPlannedCustomers().length}
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="glass-effect border-none shadow-sm">
+            <CardContent className="py-4">
+              <p className="text-xs text-muted-foreground mb-1">Geciken filtre</p>
+              <p className="text-2xl font-semibold text-red-600 dark:text-red-400">
+                {getOverdueCustomers().length}
+              </p>
+            </CardContent>
+          </Card>
         </div>
         
         <div className="flex items-center justify-between">
@@ -231,6 +274,8 @@ const CustomerList = () => {
                   onEdit={handleEditClick}
                   onDelete={handleDeleteClick}
                   onNameClick={handleNameClick}
+                  onOpenFilters={handleOpenFilters}
+                  onOpenPayments={handleOpenPayments}
                 />
               </div>
             ))
@@ -250,6 +295,8 @@ const CustomerList = () => {
                   onEdit={handleEditClick}
                   onDelete={handleDeleteClick}
                   onNameClick={handleNameClick}
+                  onOpenFilters={handleOpenFilters}
+                  onOpenPayments={handleOpenPayments}
                 />
               </div>
             ))
@@ -262,16 +309,22 @@ const CustomerList = () => {
         
         <TabsContent value="overdue" className="mt-6 space-y-4">
           {getOverdueCustomers().length > 0 ? (
-            getOverdueCustomers().map((customer, index) => (
+            getOverdueCustomers().map(({ customer, nextDate }, index) => {
+              const today = startOfDay(new Date());
+              const overdueDays = differenceInCalendarDays(today, nextDate);
+              return (
               <div key={customer.id} style={{ animationDelay: `${index * 0.05}s` }} className="animate-fade-in">
                 <CustomerCard 
                   customer={customer}
                   onEdit={handleEditClick}
                   onDelete={handleDeleteClick}
                   onNameClick={handleNameClick}
+                  onOpenFilters={handleOpenFilters}
+                  onOpenPayments={handleOpenPayments}
+                  overdueDays={overdueDays}
                 />
-              </div>
-            ))
+              </div>);
+            })
           ) : (
             <div className="text-center py-16 bg-card border rounded-xl">
               <p className="text-muted-foreground">Geciken filtre değişimi olan müşteri bulunamadı</p>
@@ -321,11 +374,14 @@ const CustomerList = () => {
         </AlertDialogContent>
       </AlertDialog>
       
-      <CustomerDetailDialog 
-        open={isDetailDialogOpen}
-        onOpenChange={setIsDetailDialogOpen}
-        customer={selectedCustomer}
-      />
+      {selectedCustomer && (
+        <CustomerDetailDialog 
+          open={isDetailDialogOpen}
+          onOpenChange={setIsDetailDialogOpen}
+          customer={selectedCustomer}
+          initialTab={detailTab}
+        />
+      )}
     </div>
   );
 };

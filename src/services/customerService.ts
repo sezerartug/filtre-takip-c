@@ -16,33 +16,16 @@ interface DbCustomer {
   user_id: string;
 }
 
-// Müşteri verilerini Supabase'den getiren fonksiyon
+// Müşteri verilerini Supabase'den getiren fonksiyon (RLS ile oturum bazlı filtreleme)
 export async function fetchCustomers(): Promise<Customer[]> {
   try {
-    // Önce oturum kontrolü
     const { data: { session } } = await supabase.auth.getSession();
-    
-    // Oturumu kontrol et, yoksa ve localStorage'da varsa kullan
-    let localUser = null;
     if (!session) {
-      const storedUserJSON = localStorage.getItem('supabase.auth.token');
-      if (storedUserJSON) {
-        try {
-          localUser = JSON.parse(storedUserJSON);
-          console.log("Yerel oturum bilgisi kullanılıyor:", localUser);
-        } catch (e) {
-          console.error("Yerel oturum bilgisi ayrıştırılamadı:", e);
-        }
-      }
-      
-      if (!localUser) {
-        console.log("Oturum açılmamış ve yerel oturum bilgisi yok.");
-        toast.error('Oturum açılmamış. Lütfen giriş yapın.');
-        return [];
-      }
+      toast.error('Oturum açılmamış. Lütfen giriş yapın.');
+      return [];
     }
-    
-    // Önce müşterileri getir
+
+    // Önce müşterileri getir (RLS politikaları kullanıcı/şirket bazlı filtre uygular)
     const { data: customersData, error: customersError } = await supabase
       .from('customers')
       .select('*');
@@ -117,37 +100,24 @@ export async function fetchCustomers(): Promise<Customer[]> {
   }
 }
 
-// Yeni müşteri ekleyen fonksiyon
+// Yeni müşteri ekleyen fonksiyon (oturum + profil company_id kullanır)
 export async function addCustomerToDb(customer: Omit<Customer, "id" | "filterDates"> & { productName: string; productPrice: number }): Promise<Customer | null> {
   try {
-    // Önce kullanıcı oturum bilgilerini kontrol et
     const { data: { session } } = await supabase.auth.getSession();
-    
-    // Oturum yoksa yerel depolama kontrolü
-    let userId = null;
-    
-    if (session && session.user) {
-      userId = session.user.id;
-      console.log("Aktif Supabase oturumu kullanılıyor, userId:", userId);
-    } else {
-      // Yerel depolamadan kullanıcı bilgilerini kontrol et
-      const storedUserJSON = localStorage.getItem('auth_user');
-      if (storedUserJSON) {
-        try {
-          const localUser = JSON.parse(storedUserJSON);
-          userId = localUser.id;
-          console.log("Yerel depolamadan alınan userId:", userId);
-        } catch (e) {
-          console.error("Yerel kullanıcı bilgisi ayrıştırılamadı:", e);
-        }
-      }
-    }
-    
-    if (!userId) {
-      console.error("Kullanıcı kimliği bulunamadı. Oturum açılmamış olabilir.");
+    if (!session?.user) {
       toast.error('Oturum açılmamış. Lütfen giriş yapın.');
       return null;
     }
+    const userId = session.user.id;
+
+    // Profilden company_id al (multi-tenant)
+    let companyId: string | null = null;
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('company_id')
+      .eq('id', userId)
+      .single();
+    if (profile?.company_id) companyId = profile.company_id;
 
     const newCustomerId = uuidv4();
     
@@ -157,7 +127,7 @@ export async function addCustomerToDb(customer: Omit<Customer, "id" | "filterDat
       customerId: newCustomerId
     });
     
-    // Müşteri kaydını oluştur
+    // Müşteri kaydını oluştur (company_id varsa ekle)
     const { data: customerData, error: customerError } = await supabase
       .from('customers')
       .insert({
@@ -167,7 +137,8 @@ export async function addCustomerToDb(customer: Omit<Customer, "id" | "filterDat
         address: customer.address,
         phone: customer.phone,
         purchase_date: customer.purchaseDate.toISOString(),
-        user_id: userId
+        user_id: userId,
+        ...(companyId && { company_id: companyId }),
       })
       .select()
       .single();
@@ -204,7 +175,7 @@ export async function addCustomerToDb(customer: Omit<Customer, "id" | "filterDat
       // müşteri eklendi ama ürün eklenemedi, yine de devam et
     }
 
-    // Filtre değişim tarihlerini oluştur
+    // Filtre değişim tarihlerini oluştur (1 yıllık periyotlar)
     const filterDates: FilterChange[] = [];
     const filterInserts = [];
     
@@ -214,7 +185,7 @@ export async function addCustomerToDb(customer: Omit<Customer, "id" | "filterDat
     let planlananEklendi = false;
     let i = 0;
     while (true) {
-      currentDate = addMonths(customer.purchaseDate, (i + 1) * 6);
+      currentDate = addMonths(customer.purchaseDate, (i + 1) * 12);
       if (currentDate < today) {
         // Geciken filtre
         const filterId = uuidv4();
@@ -335,6 +306,55 @@ export async function updateCustomerInDb(customer: Customer): Promise<boolean> {
         
         // Filtre ID'sini güncelle
         filter.id = filterId;
+      }
+    }
+
+    // Ürün bilgilerini güncelle veya ekle
+    if (typeof customer.productName !== "undefined" && typeof customer.productPrice !== "undefined") {
+      const { data: existingProduct, error: productSelectError } = await supabase
+        .from('products')
+        .select('*')
+        .eq('customer_id', customer.id)
+        .maybeSingle();
+
+      if (productSelectError) {
+        console.error("Ürün sorgulanırken hata:", productSelectError);
+        toast.error('Ürün bilgileri alınırken hata: ' + productSelectError.message);
+        return false;
+      }
+
+      if (existingProduct) {
+        const { error: productUpdateError } = await supabase
+          .from('products')
+          .update({
+            name: customer.productName,
+            price: customer.productPrice,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('customer_id', customer.id);
+
+        if (productUpdateError) {
+          console.error("Ürün güncelleme hatası:", productUpdateError);
+          toast.error('Ürün güncellenirken hata: ' + productUpdateError.message);
+          return false;
+        }
+      } else {
+        const { error: productInsertError } = await supabase
+          .from('products')
+          .insert({
+            id: uuidv4(),
+            name: customer.productName,
+            price: customer.productPrice,
+            customer_id: customer.id,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          });
+
+        if (productInsertError) {
+          console.error("Ürün ekleme hatası:", productInsertError);
+          toast.error('Ürün eklenirken hata: ' + productInsertError.message);
+          return false;
+        }
       }
     }
 

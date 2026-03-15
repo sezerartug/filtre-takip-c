@@ -153,7 +153,7 @@ const Login = () => {
                 />
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-muted-foreground">
-                    Demo: admin@deneme.com / admin123456
+                    Demo: admin@deneme.com / admin123
                   </span>
                   <Link
                     to="/forgot-password"
